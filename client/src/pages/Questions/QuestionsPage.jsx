@@ -3,10 +3,12 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { questionsApi } from "../../shared/api/questions";
 import { IoMdBookmark } from "react-icons/io";
 import { BsBookmark } from "react-icons/bs";
+import { SkeletonCard } from "../../shared/ui/Skeleton/SkeletonCard";
 
 function QuestionsPage() {
-  const { tech } = useParams(); // например, "python"
+  const { tech } = useParams(); 
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true); 
   const { search } = useLocation();
   const params = new URLSearchParams(search);
 
@@ -41,6 +43,7 @@ function QuestionsPage() {
   };
 
   const fetchQuestions = async () => {
+    setLoading(true)
     try {
       const query = new URLSearchParams({ tech });
       if (difficulty) query.set("difficulty", difficulty);
@@ -48,6 +51,8 @@ function QuestionsPage() {
       setQuestions(data);
     } catch (error) {
       console.error("Ошибка при получении вопросов:", error);
+    } finally {
+      setLoading(false)
     }
   };
 
@@ -63,6 +68,8 @@ function QuestionsPage() {
   const isBookmarked = (questionId) => {
     return bookmarks.some(b => b._id === questionId);
   };
+
+
 
   return (
     <div className="text-[var(--color-text)]">
@@ -142,8 +149,21 @@ function QuestionsPage() {
 
       <div>
         <h2 className="text-2xl font-bold mb-4">Вопросы</h2>
-        {questions.length === 0 && <p>Загрузка вопросов...</p>}
-        {questions.map((question, index) => (
+         
+                {loading && (
+          <>
+            {[...Array(4)].map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </>
+        )}
+
+   
+        {!loading && questions.length === 0 && (
+          <p>Вопросов по выбранным фильтрам не найдено</p>
+        )}
+
+        {!loading && questions.map((question, index) => (
           <section 
             key={question._id} 
             className="scroll-my-[75px] shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1),_0_10px_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none dark:border dark:border-surface-500 w-full py-2 px-4 rounded-2xl my-4"
