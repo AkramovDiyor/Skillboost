@@ -8,7 +8,8 @@ const QuestionSchema = new mongoose.Schema({
   technologies: { type: String }, // технологии, связанные с вопросом
   frameworks: { type: String }, // фрейм
   rating: { type: String },
-  // level: { type: String, default: "Junior" }, // уровень сложности (Junior, Middle, Senior)
+  direction: { type: String }, 
+  level: { type: String, default: "Junior" }, // уровень сложности (Junior, Middle, Senior)
   difficulty: {
     type: String,
     // enum: ["Стажёр", "Junior", "Middle", "Senior"],

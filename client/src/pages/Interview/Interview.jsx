@@ -1,117 +1,112 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { IoMdBookmark } from "react-icons/io";
 import { BsBookmark } from "react-icons/bs";
-
 import { AiFillLike, AiFillDislike } from "react-icons/ai";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { getQuestions, extractQuestions } from "../../shared/api/questions";
 
 const Interview = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
-
-  // const questionCount = Number(searchParams.get("count")) || 5;
-  const category = searchParams.get("category") 
-  const tehnalogies = searchParams.get("technologies") 
-  const frameworks = searchParams.get("frameworks") 
-  const level = searchParams.get("level") 
-
-
-  console.log(category, tehnalogies, frameworks, level);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
+  const category = searchParams.get("category");
+  const technologies = searchParams.get("technologies");
+  const frameworks = searchParams.get("frameworks");
+  const level = searchParams.get("level");
 
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
+  
   const [bookmarks, setBookmarks] = useState(() => {
-    // Загружаем из localStorage при первом рендере
     const saved = localStorage.getItem("bookmarks");
     return saved ? JSON.parse(saved) : [];
   });
-  console.log(questions);
-  
+
+  const [stats, setStats] = useState({ know: 0, dontKnow: 0 });
+  const [knowQuestions, setKnowQuestions] = useState([]);
+  const [dontKnowQuestions, setDontKnowQuestions] = useState([]);
+
   const toggleBookmark = (question) => {
-    let updated;
-    // Проверяем, есть ли уже этот вопрос в избранном (по _id)
     const exists = bookmarks.some(b => b._id === question._id);
+    const updated = exists
+      ? bookmarks.filter(b => b._id !== question._id)
+      : [...bookmarks, question];
     
-    if (exists) {
-      // Удаляем вопрос
-      updated = bookmarks.filter(b => b._id !== question._id);
-    } else {
-      // Добавляем весь объект вопроса
-      updated = [...bookmarks, question];
-    }
     setBookmarks(updated);
     localStorage.setItem("bookmarks", JSON.stringify(updated));
   };
 
   const currentQuestion = questions[currentIndex];
   const isBookmarked = currentQuestion
-  ? bookmarks.some(b => b._id === currentQuestion._id)
-  : false;
+    ? bookmarks.some(b => b._id === currentQuestion._id)
+    : false;
 
-  // const [bookmark, setBookmark] = useState([]);
-  const [stats, setStats] = useState({ know: 0, dontKnow: 0 });
-  const [knowQuestions, setKnowQuestions] = useState([]);
-  const [dontKnowQuestions, setDontKnowQuestions] = useState([]);
+  const fetchQuestions = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await getQuestions({
+        category,
+        technologies,
+        frameworks,
+        level,
+      });
+
+      const extracted = extractQuestions(response);
+
+      if (extracted.length === 0) {
+        setError(response?.message || "Нет вопросов по заданным фильтрам");
+        setQuestions([]);
+        return;
+      }
+
+      setQuestions(extracted);
+      setCurrentIndex(0);
+      setStats({ know: 0, dontKnow: 0 });
+      setKnowQuestions([]);
+      setDontKnowQuestions([]);
+    } catch (err) {
+      console.error("Ошибка загрузки вопросов", err);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Ошибка загрузки вопросов"
+      );
+      setQuestions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [category, technologies, frameworks, level]);
 
   useEffect(() => {
     fetchQuestions();
-  }, []);
-
-  console.log(bookmarks)
-
-  const fetchQuestions = async () => {
-    try {
-      const res = await axios.get(
-        `https://skillboost-t1xt.vercel.app/api/questions?category=${category}&technologies=${tehnalogies}&level=${level}`
-      );
-      setQuestions(res.data);
-      setCurrentIndex(0);
-      setStats({ know: 0, dontKnow: 0 });
-    } catch (error) {
-      console.error("Ошибка загрузки вопросов", error);
-    }
-  };
-  // console.log(stats);
-
-  useEffect(() => {
-    console.log("Обновлён knowQuestions:", knowQuestions);
-  }, [knowQuestions]);
-
-  useEffect(() => {
-    console.log("Обновлён dontKnowQuestions:", dontKnowQuestions);
-  }, [dontKnowQuestions]);
+  }, [fetchQuestions]);
 
   const handleAnswer = ({ know, question }) => {
     const questionStatus = {
-      id: question.id,
-      question,
+      id: question._id || question.id,
+      question: question.title || question.question,
       stats: know ? "know" : "dontKnow",
     };
 
     const updatedStats = {
       know: know ? stats.know + 1 : stats.know,
       dontKnow: !know ? stats.dontKnow + 1 : stats.dontKnow,
-      questions: [...(stats.questions || []), questionStatus], // сохраняем старые + добавляем новый
+      questions: [...(stats.questions || []), questionStatus],
     };
 
     if (know) {
-      setKnowQuestions((prev) => [...prev, question]); // ✅ всегда добавит к актуальному массиву
+      setKnowQuestions((prev) => [...prev, question]);
     } else {
-      setDontKnowQuestions((prev) => [...prev, question]); // ✅ аналогично
+      setDontKnowQuestions((prev) => [...prev, question]);
     }
 
     setStats(updatedStats);
-
-    console.log(
-      `Вопрос: ${question.question}, Ответ: ${know ? "Знаю" : "Не знаю"}`
-    );
-
-    //   console.log(knowQuestions);
-    // console.log(dontKnowQuestions);
 
     if (currentIndex + 1 < questions.length) {
       setCurrentIndex((prev) => prev + 1);
@@ -120,67 +115,89 @@ const Interview = () => {
       localStorage.setItem("stats", JSON.stringify(updatedStats));
       localStorage.setItem(
         "know",
-        JSON.stringify(
-          [...knowQuestions, know ? question : null].filter(Boolean)
-        )
+        JSON.stringify([...knowQuestions, know ? question : null].filter(Boolean))
       );
       localStorage.setItem(
         "dontKnow",
-        JSON.stringify(
-          [...dontKnowQuestions, !know ? question : null].filter(Boolean)
-        )
+        JSON.stringify([...dontKnowQuestions, !know ? question : null].filter(Boolean))
       );
       navigate("/results");
     }
   };
 
-  console.log(isBookmarked);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-xl text-[var(--color-text)]">Загрузка вопросов...</p>
+      </div>
+    );
+  }
 
-  const open = () => {
-    setShowAnswer(true);
-  };
+  if (error || questions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen px-4">
+        <div className="max-w-md text-center">
+          <div className="text-6xl mb-4">😕</div>
+          <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
+            Вопросы не найдены
+          </h2>
+          <p className="text-[var(--color-text)] mb-6">
+            {error || "По заданным фильтрам нет вопросов"}
+          </p>
+          <button
+            onClick={() => navigate("/startInterview")}
+            className="bg-[var(--color-main)] text-white px-6 py-2 rounded-lg hover:opacity-90 transition"
+          >
+            ← Вернуться к выбору фильтров
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  if (questions.length === 0) {
-    return <p className="h-[100vh] text-[var(--color-text)]">Загрузка вопросов...</p>;
+  if (!currentQuestion) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-[var(--color-text)]">Что-то пошло не так</p>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col items-center h-screen ">
+    <div className="flex flex-col items-center h-screen">
       <div className="w-full max-w-2xl px-10">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-[var(--color-text)] ">
+          <h2 className="text-2xl font-bold text-[var(--color-text)]">
             Вопрос {currentIndex + 1} из {questions.length}
           </h2>
           {isBookmarked ? (
             <IoMdBookmark
-              onClick={() => toggleBookmark(questions[currentIndex])}
-              className={`text-[20px] cursor-pointer text-[var(--color-main)]`}
+              onClick={() => toggleBookmark(currentQuestion)}
+              className="text-[20px] cursor-pointer text-[var(--color-main)]"
             />
           ) : (
             <BsBookmark
               className="text-[20px] cursor-pointer text-[var(--color-text)]"
-              onClick={() => toggleBookmark(questions[currentIndex])}
+              onClick={() => toggleBookmark(currentQuestion)}
             />
           )}
         </div>
+
         <p className="mb-2 text-[var(--color-text)]">
-          {questions[currentIndex].title}
+          {currentQuestion.title || currentQuestion.question}
         </p>
-        <div
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center cursor-pointer mb-2 gap-2"
-        >
+
+        <div className="flex items-center cursor-pointer mb-2 gap-2">
           <button
-            className="text-[#94A3B8] "
+            className="text-[#94A3B8]"
             onClick={() => setShowAnswer(!showAnswer)}
-            // style={{ display: showAnswer ? "none" : "block" }}
           >
             {showAnswer ? "Скрыть ответ" : "Показать ответ"}
           </button>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className={`fill-st-black dark:fill-white icon mt-1 transition-transform duration-300 ${
-              isOpen ? "rotate-180" : ""
+              showAnswer ? "rotate-180" : ""
             }`}
             width="13"
             height="8"
@@ -189,29 +206,26 @@ const Interview = () => {
             <path d="M6.5 7.4L0.5 1.4L1.9 0L6.5 4.6L11.1 0L12.5 1.4L6.5 7.4Z" />
           </svg>
         </div>
+
         {showAnswer && (
           <div className="answer-box">
             <p className="text-[var(--color-text)]">
-              <strong>Ответ:</strong> {questions[currentIndex].answer}
+              <strong>Ответ:</strong> {currentQuestion.answer}
             </p>
           </div>
         )}
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-5 mt-6">
           <button
-            className="  text-[var(--color-text)] flex items-center gap-2 border-2 border-[var(--color-text)] rounded-lg px-2 py-1 cursor-pointer hover:border-[var(--color-main)] hover:text-[var(--color-main)] duration-300 "
-            onClick={() =>
-              handleAnswer({ know: true, question: currentQuestion })
-            }
+            className="text-[var(--color-text)] flex items-center gap-2 border-2 border-[var(--color-text)] rounded-lg px-2 py-1 cursor-pointer hover:border-[var(--color-main)] hover:text-[var(--color-main)] duration-300"
+            onClick={() => handleAnswer({ know: true, question: currentQuestion })}
           >
             <AiFillLike className="btn-icon" />
             Знаю
           </button>
           <button
-            className=" text-[var(--color-text)]  flex items-center gap-2 border-2 border-[var(--color-text)] rounded-lg px-2 py-1 cursor-pointer hover:border-[#ff0000] hover:text-[red] duration-300 "
-            onClick={() =>
-              handleAnswer({ know: false, question: currentQuestion })
-            }
+            className="text-[var(--color-text)] flex items-center gap-2 border-2 border-[var(--color-text)] rounded-lg px-2 py-1 cursor-pointer hover:border-[#ff0000] hover:text-[red] duration-300"
+            onClick={() => handleAnswer({ know: false, question: currentQuestion })}
           >
             <AiFillDislike className="btn-icon" />
             Не знаю
