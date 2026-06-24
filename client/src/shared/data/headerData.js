@@ -6,6 +6,7 @@ export const linkList = [
     { name: "Тренажёр собеседований", path: "/startInterview" },
     { name: "Лайв кодинг", path: "/coding" },
     { name: "Роадмапы", path: "/roadmaps" },
+    { name: "Тестовые задания", path: "/test-tasks" },
   ];
 
 export  const interview = [
