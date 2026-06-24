@@ -1,6 +1,6 @@
-import { api_local } from "./base";
+import { api } from "./base";
 
 export const authApi = {
-    login: (credentials) => api_local.post('/auth/login', credentials),
-    register: (userData) => api_local.post('auth/register', userData),
+    login: (credentials) => api.post('/auth/login', credentials),
+    register: (userData) => api.post('auth/register', userData),
 }

@@ -1,17 +1,17 @@
-import { api, api_local } from "./base";
+import { api } from "./base";
 
 
 /**
  * Получение вопросов по технологии
  */
 export const questionsApi = {
-    getByTech: (queryParams) => api_local.get('/questionsTech', { params: queryParams })
+    getByTech: (queryParams) => api.get('/questionsTech', { params: queryParams })
 }
 /**
  * Получение вопросов по фильтрам
  */
 export const getQuestions = async ({ category, technologies, frameworks, level, count = 15 }) => {
-    const response = await api_local.get("/questions", {
+    const response = await api.get("/questions", {
       params: { category, technologies, frameworks, level, count },
     });
     return response.data;

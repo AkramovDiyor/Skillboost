@@ -1,16 +1,16 @@
 
-import { api_local } from "./base";
+import { api } from "./base";
 
 export const bookmarksApi = {
   // Получить список закладок
   async getAll() {
-    const { data } = await api_local.get("/bookmarks");
+    const { data } = await api.get("/bookmarks");
     return data;
   },
 
   // Добавить/убрать из закладок
   async toggle(questionId) {
-    const { data } = await api_local.post("/bookmarks/toggle", { questionId });
+    const { data } = await api.post("/bookmarks/toggle", { questionId });
     return data;
   },
 };
