@@ -14,3 +14,13 @@ api.interceptors.request.use((config) => {
     }
     return config
 })
+api_local.interceptors.request.use((config) => {
+    const data = localStorage.getItem('data');
+    if (data) {
+        const parsed = JSON.parse(data);
+        if (parsed?.token) {
+            config.headers.Authorization = `Bearer ${parsed.token}`;
+        }
+    }
+    return config;
+});

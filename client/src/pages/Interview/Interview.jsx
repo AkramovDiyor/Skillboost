@@ -4,6 +4,7 @@ import { BsBookmark } from "react-icons/bs";
 import { AiFillLike, AiFillDislike } from "react-icons/ai";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { getQuestions, extractQuestions } from "../../shared/api/questions";
+import { bookmarksApi } from "../../shared/api/bookmarks"; 
 
 const Interview = () => {
   const [searchParams] = useSearchParams();
@@ -21,28 +22,67 @@ const Interview = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   
-  const [bookmarks, setBookmarks] = useState(() => {
-    const saved = localStorage.getItem("bookmarks");
-    return saved ? JSON.parse(saved) : [];
-  });
 
-  const [stats, setStats] = useState({ know: 0, dontKnow: 0 });
+  const [bookmarks, setBookmarks] = useState([]);
+  const [bookmarksLoading, setBookmarksLoading] = useState(true);
+
+  const [stats, setStats] = useState({ know: 0, dontKnow: 0, questions: []});
   const [knowQuestions, setKnowQuestions] = useState([]);
   const [dontKnowQuestions, setDontKnowQuestions] = useState([]);
 
-  const toggleBookmark = (question) => {
-    const exists = bookmarks.some(b => b._id === question._id);
-    const updated = exists
-      ? bookmarks.filter(b => b._id !== question._id)
-      : [...bookmarks, question];
-    
-    setBookmarks(updated);
-    localStorage.setItem("bookmarks", JSON.stringify(updated));
+
+  useEffect(() => {
+    const fetchBookmarks = async () => {
+      try {
+        setBookmarksLoading(true);
+        const data = await bookmarksApi.getAll();
+        setBookmarks(data.map(q => q._id));
+      } catch (error) {
+        console.error("Ошибка при получении закладок:", error);
+        setBookmarks([]);
+      } finally {
+        setBookmarksLoading(false);
+      }
+    };
+
+    fetchBookmarks();
+  }, []);
+
+  const toggleBookmark = async (question) => {
+    const questionId = question._id;
+    const wasBookmarked = bookmarks.includes(questionId);
+
+  
+    if (wasBookmarked) {
+      setBookmarks(bookmarks.filter(id => id !== questionId));
+    } else {
+      setBookmarks([...bookmarks, questionId]);
+    }
+
+    try {
+      const response = await bookmarksApi.toggle(questionId);
+      
+      if (response.isBookmarked !== !wasBookmarked) {
+        setBookmarks(response.isBookmarked 
+          ? [...bookmarks, questionId]
+          : bookmarks.filter(id => id !== questionId)
+        );
+      }
+    } catch (error) {
+      console.error("Ошибка при обновлении закладки:", error);
+      if (wasBookmarked) {
+        setBookmarks([...bookmarks, questionId]);
+      } else {
+        setBookmarks(bookmarks.filter(id => id !== questionId));
+      }
+      alert("Не удалось обновить закладку. Попробуйте ещё раз.");
+    }
   };
+
 
   const currentQuestion = questions[currentIndex];
   const isBookmarked = currentQuestion
-    ? bookmarks.some(b => b._id === currentQuestion._id)
+    ? bookmarks.includes(currentQuestion._id)
     : false;
 
   const fetchQuestions = useCallback(async () => {
@@ -90,7 +130,7 @@ const Interview = () => {
   const handleAnswer = ({ know, question }) => {
     const questionStatus = {
       id: question._id || question.id,
-      question: question.title || question.question,
+      question: question,
       stats: know ? "know" : "dontKnow",
     };
 
@@ -170,17 +210,18 @@ const Interview = () => {
           <h2 className="text-2xl font-bold text-[var(--color-text)]">
             Вопрос {currentIndex + 1} из {questions.length}
           </h2>
-          {isBookmarked ? (
-            <IoMdBookmark
-              onClick={() => toggleBookmark(currentQuestion)}
-              className="text-[20px] cursor-pointer text-[var(--color-main)]"
-            />
-          ) : (
-            <BsBookmark
-              className="text-[20px] cursor-pointer text-[var(--color-text)]"
-              onClick={() => toggleBookmark(currentQuestion)}
-            />
-          )}
+          <button
+            onClick={() => toggleBookmark(currentQuestion)}
+            disabled={bookmarksLoading}
+            aria-label="Добавить в избранное"
+            className="relative flex items-center justify-center disabled:opacity-50"
+          >
+            {isBookmarked ? (
+              <IoMdBookmark className="text-[20px] cursor-pointer text-[var(--color-main)]" />
+            ) : (
+              <BsBookmark className="text-[20px] cursor-pointer text-[var(--color-text)]" />
+            )}
+          </button>
         </div>
 
         <p className="mb-2 text-[var(--color-text)]">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { questionsApi } from "../../shared/api/questions";
+import { bookmarksApi } from "../../shared/api/bookmarks"; // 👈 Добавляем API для закладок
 import { IoMdBookmark } from "react-icons/io";
 import { BsBookmark } from "react-icons/bs";
 import { SkeletonCard } from "../../shared/ui/Skeleton/SkeletonCard";
@@ -14,45 +15,81 @@ function QuestionsPage() {
 
   const [questions, setQuestions] = useState([]);
   const [visibleAnswerIndex, setVisibleAnswerIndex] = useState(null);
-  const [bookmarks, setBookmarks] = useState([]);
+  const [bookmarks, setBookmarks] = useState([]); 
+  const [bookmarksLoading, setBookmarksLoading] = useState(true); 
   
-  // Инициализируем difficulty из URL, если есть
   const [difficulty, setDifficulty] = useState(params.get("difficulty") || null);
 
   const difficultyLevels = ["Стажёр", "Junior", "Middle", "Senior"];
 
-  // Загружаем избранное из localStorage при монтировании
+
   useEffect(() => {
-    const savedBookmarks = localStorage.getItem("bookmarks");
-    if (savedBookmarks) {
-      setBookmarks(JSON.parse(savedBookmarks));
-    }
+    const fetchBookmarks = async () => {
+      try {
+        setBookmarksLoading(true);
+        const data = await bookmarksApi.getAll();
+
+        setBookmarks(data.map(q => q._id));
+      } catch (error) {
+        console.error("Ошибка при получении закладок:", error);
+
+        setBookmarks([]);
+      } finally {
+        setBookmarksLoading(false);
+      }
+    };
+
+    fetchBookmarks();
   }, []);
 
-  const toggleBookmark = (question) => {
-    let updated;
-    const exists = bookmarks.some(b => b._id === question._id);
-    
-    if (exists) {
-      updated = bookmarks.filter(b => b._id !== question._id);
+
+  const toggleBookmark = async (question) => {
+    const questionId = question._id;
+    const wasBookmarked = bookmarks.includes(questionId);
+
+
+    if (wasBookmarked) {
+      setBookmarks(bookmarks.filter(id => id !== questionId));
     } else {
-      updated = [...bookmarks, question];
+      setBookmarks([...bookmarks, questionId]);
     }
-    setBookmarks(updated);
-    localStorage.setItem("bookmarks", JSON.stringify(updated));
+
+    try {
+  
+      const response = await bookmarksApi.toggle(questionId);
+      
+ 
+      if (response.isBookmarked !== !wasBookmarked) {
+        setBookmarks(response.isBookmarked 
+          ? [...bookmarks, questionId]
+          : bookmarks.filter(id => id !== questionId)
+        );
+      }
+    } catch (error) {
+      console.error("Ошибка при обновлении закладки:", error);
+
+      if (wasBookmarked) {
+        setBookmarks([...bookmarks, questionId]);
+      } else {
+        setBookmarks(bookmarks.filter(id => id !== questionId));
+      }
+      
+  
+      alert("Не удалось обновить закладку. Попробуйте ещё раз.");
+    }
   };
 
   const fetchQuestions = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const query = new URLSearchParams({ tech });
       if (difficulty) query.set("difficulty", difficulty);
-      const {data} = await questionsApi.getByTech(query);
+      const { data } = await questionsApi.getByTech(query);
       setQuestions(data);
     } catch (error) {
       console.error("Ошибка при получении вопросов:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   };
 
@@ -61,15 +98,14 @@ function QuestionsPage() {
   }, [tech, difficulty]);
 
   const handleDifficultyClick = (level) => {
-    setDifficulty(level); // useEffect автоматически вызовет fetchQuestions
-    navigate(`?difficulty=${encodeURIComponent(level)}`); // обновляем URL
+    setDifficulty(level);
+    navigate(`?difficulty=${encodeURIComponent(level)}`);
   };
+
 
   const isBookmarked = (questionId) => {
-    return bookmarks.some(b => b._id === questionId);
+    return bookmarks.includes(questionId);
   };
-
-
 
   return (
     <div className="text-[var(--color-text)]">
@@ -108,9 +144,7 @@ function QuestionsPage() {
       </div>
 
       <div className="flex flex-col gap-2 mt-4">
-        <p className="text-md font-medium">
-          Выберите грейд
-        </p>
+        <p className="text-md font-medium">Выберите грейд</p>
         <div className="flex items-center gap-2 flex-wrap">
           {difficultyLevels.map((level) => (
             <div 
@@ -150,7 +184,7 @@ function QuestionsPage() {
       <div>
         <h2 className="text-2xl font-bold mb-4">Вопросы</h2>
          
-                {loading && (
+        {loading && (
           <>
             {[...Array(4)].map((_, i) => (
               <SkeletonCard key={i} />
@@ -158,7 +192,6 @@ function QuestionsPage() {
           </>
         )}
 
-   
         {!loading && questions.length === 0 && (
           <p>Вопросов по выбранным фильтрам не найдено</p>
         )}
@@ -181,8 +214,9 @@ function QuestionsPage() {
                     <section className="relative inline-flex ml-auto">
                       <button
                         onClick={() => toggleBookmark(question)}
+                        disabled={bookmarksLoading} // Блокируем пока грузятся закладки
                         aria-label="Добавить в избранное"
-                        className="relative flex items-center justify-center"
+                        className="relative flex items-center justify-center disabled:opacity-50"
                       >
                         {isBookmarked(question._id) ? (
                           <IoMdBookmark className="text-[20px] cursor-pointer text-[var(--color-main)]" />
@@ -198,9 +232,7 @@ function QuestionsPage() {
                   </div>
                   <div>
                     Рейтинг вопроса:
-                    <span className="font-medium">
-                      {question.rating}
-                    </span>
+                    <span className="font-medium">{question.rating}</span>
                   </div>
                 </section>
 

@@ -1,4 +1,4 @@
-const { Schema, model } = require("mongoose");
+const { Schema, model, Types } = require("mongoose");
 
 const UserSchema = new Schema(
   {
@@ -44,6 +44,12 @@ const UserSchema = new Schema(
       type: String, // Хранит URL изображения
       default: "", // Можно задать дефолтное изображение
     },
+    bookmarks: [
+      {
+        type: Types.ObjectId,
+        ref: "Question", // название модели вопроса
+      },
+    ], 
   },
   {
     timestamps: true,

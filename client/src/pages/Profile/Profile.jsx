@@ -1,34 +1,53 @@
 import React, { useState, useEffect } from "react";
 import { FaUser } from "react-icons/fa";
 import { IoMdBookmark } from "react-icons/io";
-import { BsBookmark } from "react-icons/bs";
 import Edit from "./Edit/Edit";
 import { useNavigate } from "react-router-dom";
+import { bookmarksApi } from "../../shared/api/bookmarks"; // 👈 Добавляем API
 
 const Profile = () => {
   const [edit, setEdit] = useState(false);
-  const [activeTab, setActiveTab] = useState(0); // 0 - Информация, 1 - Избранное
+  const [activeTab, setActiveTab] = useState(0);
   const [visibleAnswerIndex, setVisibleAnswerIndex] = useState(null);
   const [bookmarks, setBookmarks] = useState([]);
-
+  const [bookmarksLoading, setBookmarksLoading] = useState(true); 
   const storedData = JSON.parse(localStorage.getItem("data")) || {};
   const avatarUrl = storedData.avatarUrl ? storedData.avatarUrl : null;
 
   const navigate = useNavigate();
 
-  // Загружаем избранное из localStorage при монтировании
+
   useEffect(() => {
-    const savedBookmarks = localStorage.getItem("bookmarks");
-    if (savedBookmarks) {
-      setBookmarks(JSON.parse(savedBookmarks));
-    }
+    const fetchBookmarks = async () => {
+      try {
+        setBookmarksLoading(true);
+        const data = await bookmarksApi.getAll();
+        setBookmarks(data); 
+      } catch (error) {
+        console.error("Ошибка при получении закладок:", error);
+        setBookmarks([]);
+      } finally {
+        setBookmarksLoading(false);
+      }
+    };
+
+    fetchBookmarks();
   }, []);
 
-  // Функция для удаления вопроса из избранного
-  const removeBookmark = (questionId) => {
+
+  const removeBookmark = async (questionId) => {
+
     const updatedBookmarks = bookmarks.filter(item => item._id !== questionId);
     setBookmarks(updatedBookmarks);
-    localStorage.setItem("bookmarks", JSON.stringify(updatedBookmarks));
+
+    try {
+      await bookmarksApi.toggle(questionId);
+    } catch (error) {
+      console.error("Ошибка при удалении из избранного:", error);
+
+      setBookmarks(bookmarks);
+      alert("Не удалось удалить из избранного");
+    }
   };
 
   const handleLogout = () => {
@@ -37,19 +56,16 @@ const Profile = () => {
     navigate('/auth');
   };
 
-  // Данные для вкладок
   const tabs = [
     { id: 0, title: "Информация" },
     { id: 1, title: "Избранное" },
   ];
 
-  // Контент для вкладок
   const renderTabContent = () => {
     switch (activeTab) {
       case 0:
         return (
           <div>
-            {/* Информация о пользователе */}
             <section className="w-full flex flex-col gap-3">
               <section className="flex flex-col gap-3 border border-[var(--color-text)] p-3 md:p-4 dark:bg-st-white-T5 rounded-2xl sm:flex-row">
                 <section className="flex justify-between items-start gap-1.5">
@@ -128,14 +144,42 @@ const Profile = () => {
             </section>
           </div>
         );
+      
       case 1:
         return (
           <div className="p-4">
             <h3 className="text-xl font-bold mb-3 text-[var(--color-text)]">Избранное</h3>
-            <div className="space-y-2">
-              {bookmarks ? (
-                bookmarks.map((item, index) => (
-                  <section key={item._id} className="text-[var(--color-text)] shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1),_0_10px_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none dark:border dark:border-surface-500 w-full py-2 px-4 rounded-2xl my-4">
+            
+
+            {bookmarksLoading ? (
+              <div className="text-center py-8 text-gray-400">
+                <p>Загрузка избранных...</p>
+              </div>
+            ) : bookmarks.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <svg
+                  className="w-16 h-16 mx-auto mb-4 opacity-50"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.5"
+                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                  />
+                </svg>
+                <p>Пока ничего не добавлено в избранное</p>
+                <p className="text-sm mt-1">Добавляйте вопросы во время собеседований</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {bookmarks.map((item, index) => (
+                  <section 
+                    key={item._id} 
+                    className="text-[var(--color-text)] shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1),_0_10px_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none dark:border dark:border-surface-500 w-full py-2 px-4 rounded-2xl my-4"
+                  >
                     <section className="relative w-full">
                       <section className="flex flex-col gap-3 pt-4 pb-2">
                         <section className="flex flex-col gap-2 text-sm">
@@ -190,29 +234,12 @@ const Profile = () => {
                       </section>
                     </section>
                   </section>
-                ))
-              ) : (
-                <div className="text-center py-8 text-gray-400">
-                  <svg
-                    className="w-16 h-16 mx-auto mb-4 opacity-50"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="1.5"
-                      d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                    />
-                  </svg>
-                  <p>Пока ничего не добавлено в избранное</p>
-                  <p className="text-sm mt-1">Добавляйте вопросы во время собеседований</p>
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         );
+      
       default:
         return null;
     }
@@ -226,9 +253,7 @@ const Profile = () => {
         </div>
       ) : (
         <div className="pb-5">
-          {/* Табы */}
           <div className="relative">
-            {/* Список табов */}
             <ul className="flex list-none p-0 m-0 relative w-[260px]">
               {tabs.map((tab) => (
                 <li key={tab.id} className="flex-1 sm:flex-none">
@@ -238,22 +263,19 @@ const Profile = () => {
                       setVisibleAnswerIndex(null);
                     }}
                     className={`
-            w-full sm:w-auto px-6 py-4 text-sm font-medium transition-colors duration-300
-            ${activeTab === tab.id ? "text-[var(--color-main)]" : "text-[#6e8a9e] hover:text-[var(--color-text)]"}
-          `}
+                      w-full sm:w-auto px-6 py-4 text-sm font-medium transition-colors duration-300
+                      ${activeTab === tab.id ? "text-[var(--color-main)]" : "text-[#6e8a9e] hover:text-[var(--color-text)]"}
+                    `}
                   >
                     {tab.title}
                   </button>
                 </li>
               ))}
 
-              {/* Твоя полосочка (Индикатор) */}
               <li
                 className="absolute bottom-0 h-1 transition-all duration-300 ease-in-out"
                 style={{
-                  // Ширина полоски равна 100% разделенному на количество табов
                   width: `${100 / tabs.length}%`,
-                  // Смещение влево зависит от активного таба
                   left: `${(activeTab * 100) / tabs.length}%`,
                   backgroundColor: 'var(--color-main)',
                   borderRadius: '2px 2px 0 0'
@@ -266,7 +288,6 @@ const Profile = () => {
             Мой профиль
           </h1>
 
-          {/* Контент активной вкладки */}
           <div>
             {renderTabContent()}
           </div>
