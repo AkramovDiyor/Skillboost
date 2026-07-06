@@ -329,7 +329,7 @@ export const CodingPage = () => {
                 <TaskDescription />
               </div>
             ) : (
-              <div className="h-full">
+              <div className="h-full flex flex-col">
                 <CodingEditorPanel
                   Language={taskData.languages}
                   code={code}

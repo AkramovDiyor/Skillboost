@@ -56,7 +56,7 @@ export const CodingEditorPanel = ({
 
       {/* Monaco Editor */}
       {/* 🔧 flex-1 + min-h-0 + h-0 позволяет редактору занимать доступное место */}
-      <div className="h-150 sm:h-[70%]">
+      <div className="flex-1 min-h-[120px] sm:flex-none sm:h-[60%]">
         <Editor
           defaultLanguage={monacoLanguage}
           language={monacoLanguage}

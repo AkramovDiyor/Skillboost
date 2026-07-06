@@ -12,7 +12,7 @@ export const ResultsPanel = ({ results, isRunning }) => {
   
     if (!results) {
       return (
-        <div className="flex items-center justify-center h-full text-gray-400">
+        <div className="mt-5 flex items-center justify-center text-gray-400">
           <div className="text-center space-y-2">
             <div className="w-12 h-12 mx-auto mb-3 bg-gray-700 rounded-full flex items-center justify-center">
               <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
