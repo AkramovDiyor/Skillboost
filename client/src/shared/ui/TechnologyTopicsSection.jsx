@@ -1,5 +1,6 @@
 import React from 'react';
 import { technologies } from '../data/technologies';
+import { Link } from 'react-router-dom';
 
 
 
@@ -11,9 +12,9 @@ const TechnologyTopicsSection = () => {
       </h2>
       <section className="flex gap-3 flex-wrap" aria-label="Список технологий">
         {technologies.map((tech, i) => (
-          <a
+          <Link
             key={i}
-            href={tech.href}
+            to={tech.href}
             className="click-effect hover:bg-gray-200 h-9 bg-white rounded-full text-sm px-2 pl-2 pr-3 flex items-center justify-between gap-3"
             aria-labelledby={`topic-title-${i}`}
           >
@@ -24,7 +25,7 @@ const TechnologyTopicsSection = () => {
             <span id={`topic-title-${i}`} className="text-black">
               {tech.name}
             </span>
-          </a>
+          </Link>
         ))}
       </section>
     </section>

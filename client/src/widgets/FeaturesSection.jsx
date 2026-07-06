@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 const FeaturesSection = () => {
     return (
@@ -186,25 +187,25 @@ const FeaturesSection = () => {
 
                                 {/* Кнопка “Подробнее” */}
                                 <div className=" hidden sm:flex absolute justify-center w-full bottom-5 translate-y-20 group-hover/feature:translate-y-0 place-self-center transition-transform duration-[250ms] z-40">
-                                    <a
-                                        href="/baza_voprosov"
+                                    <Link
+                                        to={"/baza_voprosov"}
                                         className="click-effect px-10 py-2.5 rounded-xl shadow-xl bg-st-green-90 text-white bg-[#049666] text-center font-semibold  text-sm"
                                         aria-label="Перейти к /baza_voprosov"
                                     >
                                         Подробнее
-                                    </a>
+                                    </Link>
                                 </div>
                             </section>
 
                             {/* Кнопка “Подробнее” на мобилке */}
                             <div className="flex sm:hidden justify-center w-full">
-                                <a
-                                    href="/baza_voprosov"
+                                <Link
+                                    to={"/baza_voprosov"}
                                     className="click-effect w-full py-2.5 rounded-xl shadow-xl bg-st-green-90 my-3 bg-[#049666] text-center font-semibold text-white text-sm"
                                     aria-label="Перейти к /baza_voprosov"
                                 >
                                     Подробнее
-                                </a>
+                                </Link>
                             </div>
                         </section>
                     </section>
@@ -228,25 +229,25 @@ const FeaturesSection = () => {
 
                             {/* Кнопка “Подробнее” */}
                             <div className=" hidden sm:flex absolute justify-center w-full bottom-5 translate-y-20 group-hover/feature:translate-y-0 place-self-center transition-transform duration-[250ms] z-40">
-                                <a
-                                    href="/roadmaps"
+                                <Link
+                                    to={"/roadmaps"}
                                     className="click-effect px-10 py-2.5 rounded-xl shadow-xl bg-st-green-90 text-white bg-[#049666] text-center font-semibold  text-sm"
                                     aria-label="Перейти к /roadmaps"
                                 >
                                     Подробнее
-                                </a>
+                                </Link>
                             </div>
                         </section>
 
                         {/* Кнопка “Подробнее” на мобилке */}
                         <div className="flex sm:hidden justify-center w-full">
-                            <a
-                                href="/roadmaps"
+                        <Link
+                                    to={"/roadmaps"}
                                 className="click-effect w-full py-2.5 rounded-xl shadow-xl bg-st-green-90 my-3 bg-[#049666] text-center font-semibold text-white text-sm"
                                 aria-label="Перейти к /roadmaps"
                             >
                                 Подробнее
-                            </a>
+                            </Link>
                         </div>
                     </section>
                 </section>
@@ -352,22 +353,22 @@ const FeaturesSection = () => {
 
                     {/* Кнопка "Подробнее" */}
                     <div className="hidden sm:flex absolute justify-center w-full bottom-5 translate-y-20 group-hover/feature:translate-y-0 place-self-center transition-transform duration-[250ms] z-40">
-                        <a
-                            href="/coding"
+                        <Link
+                            to={"/coding"}
                             className="click-effect px-10 py-2.5 rounded-xl shadow-xl bg-st-green-90 text-white bg-[#049666] text-center font-semibold  text-sm"
                         >
                             Подробнее
-                        </a>
+                        </Link>
                     </div>
                 </section>
                 <div className="flex sm:hidden justify-center w-full">
-                    <a
-                        href="/coding"
+                    <Link
+                        to={"/coding"}
                         className="click-effect w-full py-2.5 rounded-xl shadow-xl bg-st-green-90 my-3 bg-[#049666] text-center font-semibold text-white text-sm"
                         aria-label="Перейти к /coding"
                     >
                         Подробнее
-                    </a>
+                    </Link>
                 </div>
                 <section className="group/feature sm:w-[45%] relative flex flex-col p-7 bg-[var(--bg-03)]  rounded-[20px] overflow-hidden border-[1px] border-[#4444]">
                     <header className="flex flex-col gap-2.5">
@@ -474,23 +475,23 @@ const FeaturesSection = () => {
 
                     {/* Кнопка "Подробнее" */}
                     <div className="hidden sm:flex absolute justify-center w-full bottom-5 translate-y-20 group-hover/feature:translate-y-0 place-self-center transition-transform duration-[250ms] z-40">
-                        <a
-                            href="/startInterview"
+                        <Link
+                            to={"/startInterview"}
                             className="click-effect px-10 py-2.5 rounded-xl shadow-xl bg-st-green-90 text-white bg-[#049666] text-center font-semibold  text-sm"
                             aria-label="Перейти к /startInterview"
                         >
                             Подробнее
-                        </a>
+                        </Link>
                     </div>
                 </section>
                 <div className="flex sm:hidden justify-center w-full">
-                    <a
-                        href="/startInterview"
+                    <Link
+                        to={"/startInterview"}
                         className="click-effect w-full py-2.5 rounded-xl shadow-xl bg-st-green-90 my-3 bg-[#049666] text-center font-semibold text-white text-sm"
                         aria-label="Перейти к /startInterview"
                     >
                         Подробнее
-                    </a>
+                    </Link>
                 </div>
             </section>
         </>

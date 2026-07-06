@@ -208,16 +208,7 @@ class QuestionController {
     }
   }
 
-  async randamQuestion(req, res) {
-    try {
-      const count = await Question.countDocuments();
-      const randomIndex = Math.floor(Math.random() * count);
-      const question = await Question.findOne().skip(randomIndex);
-      res.json(question);
-    } catch (error) {
-      res.status(500).json({ message: "Ошибка получения вопроса", error });
-    }
-  }
+
 
   async catigoryquestion(req, res) {
     try {

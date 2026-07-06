@@ -5,6 +5,7 @@ import TechnologyTopicsSection from "../shared/ui/TechnologyTopicsSection";
 import MentorsSection from "../widgets/MentorsSection";
 import Footer from "../widgets/Footer";
 import FeaturesSection from "../widgets/FeaturesSection";
+import { Link } from "react-router-dom";
 
 const Dashboard = () => {
   const storedData = JSON.parse(localStorage.getItem("data")) || {};
@@ -19,12 +20,12 @@ const Dashboard = () => {
         <h2 className="text-[20px] sm:text-3xl lg:text-5xl text-center text-[#9747FF] bg-white px-5 py-3 rounded-[8px] sm:rounded-[20px] font-bold mb-6 sm:mb-12 -rotate-[3.53deg] z-20">
           к техническим собеседованиям
         </h2>
-        <a
-          href="/home/startInterview"
+        <Link
+          to={"/startInterview"}
           className="rounded-full text-xl sm:text-2xl bg-[#9747FF] hover:bg-[#6a32b5] text-white px-5 sm:px-8 py-3 font-semibold z-20"
         >
           Подготовиться <span className="hidden sm:inline">к собеседованию</span>
-        </a>
+        </Link>
       </div>
 
       <section className="relative w-full flex flex-col gap-4 md:gap-7 mt-10">
@@ -44,12 +45,12 @@ const Dashboard = () => {
               </p>
             </header>
             <article className="hidden md:flex justify-center">
-              <a
-                href="/subscription"
+              <Link
+                to={"/subscription"}
                 className="px-5 py-3 rounded-xl w-full bg-st-green-9 bg-[#049666] text-center font-semibold text-white"
               >
                 Оформить подписку
-              </a>
+              </Link>
             </article>
           </header>
 
@@ -61,12 +62,12 @@ const Dashboard = () => {
               loading="lazy"
             />
             <article className="md:hidden flex justify-center">
-              <a
-                href="/subscription"
+              <Link
+                to={"/subscription"}
                 className=" px-5 py-3 rounded-xl w-full bg-st-green-90 bg-[#049666] text-center font-semibold text-white"
               >
                 Оформить подписку
-              </a>
+              </Link>
             </article>
           </article>
         </section>

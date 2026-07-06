@@ -4,14 +4,14 @@ const router = Router();
 const AuthController = require("../Controller/auth-controller.js");
 const QuestionController = require("../Controller/question-controller.js");
 const EditController = require('../Controller/edit-controller.js')
-const upload = require("../middlewares/upload");
-const checkAuth = require('../middlewares/checkAuth.js');
+const upload = require("../Controller/middlewares/upload.js");
+const checkAuth = require('../Controller/middlewares/checkAuth.js');
 const UserController = require("../Controller/user-controller.js");
 
 router.post("/auth/register", AuthController.register);
 router.post("/auth/login", AuthController.login);
 router.get("/questionAll", QuestionController.getAllQuestions);
-router.get("/random", QuestionController.randamQuestion);
+// router.get("/random", QuestionController.randamQuestion); 
 router.get("/questions", QuestionController.catigoryquestion);
 router.get("/questionsTech", QuestionController.getQuestion);
 

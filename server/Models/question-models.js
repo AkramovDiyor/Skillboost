@@ -2,19 +2,16 @@ const mongoose = require("mongoose");
 
 const QuestionSchema = new mongoose.Schema({
   title: { type: String, required: true }, // краткое описание или заголовок вопроса
-  // question: { type: String, required: true }, // текст вопроса
   answer: { type: String, required: true }, // подробный ответ
   category: { type: String }, // категория (можно расширить для разных тем)
   technologies: { type: String }, // технологии, связанные с вопросом
   frameworks: { type: String }, // фрейм
   rating: { type: String },
   direction: { type: String }, 
-  level: { type: String, default: "Junior" }, // уровень сложности (Junior, Middle, Senior)
+  level: { type: String, default: "Junior" },
   difficulty: {
     type: String,
-    // enum: ["Стажёр", "Junior", "Middle", "Senior"],
-    // default: "Средняя",
-  }, // уровень сложности
+  }, 
   createdAt: { type: Date, default: Date.now },
 });
 
