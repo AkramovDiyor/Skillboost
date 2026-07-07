@@ -69,6 +69,125 @@ class UserController {
       return res.status(500).json({ message: "Ошибка при обновлении закладок" });
     }
   }
+
+  async purchaseSubscription(req, res) {
+    try {
+      const userId = req.userId;
+      const { subscriptionType } = req.body; // "standard" или "premium"
+
+      if (!userId) {
+        return res.status(401).json({ message: "Не авторизован" });
+      }
+
+      if (!subscriptionType || !["standard", "premium"].includes(subscriptionType)) {
+        return res.status(400).json({ message: "Неверный тип подписки" });
+      }
+
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Пользователь не найден" });
+      }
+
+      // Определяем длительность подписки
+      // Standard = 1 месяц, Premium = 3 месяца
+      const subscriptionDuration = subscriptionType === "standard" ? 1 : 3;
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + subscriptionDuration);
+
+      // Обновляем подписку
+      user.subscriptionType = subscriptionType;
+      user.subscriptionStartDate = startDate;
+      user.subscriptionEndDate = endDate;
+      await user.save();
+
+      return res.json({
+        success: true,
+        message: `Подписка ${subscriptionType === "standard" ? "Стандарт" : "Премиум"} успешно активирована`,
+        subscription: {
+          type: subscriptionType,
+          duration: subscriptionDuration,
+          startDate: startDate,
+          endDate: endDate,
+        },
+      });
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json({ message: "Не удалось активировать подписку" });
+    }
+  }
+
+  // ✅ Получить текущую подписку
+  async getSubscription(req, res) {
+    try {
+      const userId = req.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Не авторизован" });
+      }
+
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Пользователь не найден" });
+      }
+
+      // Проверяем, не истекла ли подписка
+      const now = new Date();
+      const isExpired = user.subscriptionEndDate && now > user.subscriptionEndDate;
+
+      if (isExpired) {
+        // Сбрасываем подписку если она истекла
+        user.subscriptionType = "none";
+        user.subscriptionStartDate = null;
+        user.subscriptionEndDate = null;
+        await user.save();
+      }
+
+      return res.json({
+        subscriptionType: isExpired ? "none" : user.subscriptionType,
+        startDate: user.subscriptionStartDate,
+        endDate: user.subscriptionEndDate,
+        isActive: !isExpired && user.subscriptionType !== "none",
+        daysRemaining: isExpired 
+          ? 0 
+          : Math.ceil((user.subscriptionEndDate - now) / (1000 * 60 * 60 * 24)),
+      });
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json({ message: "Не удалось получить информацию о подписке" });
+    }
+  }
+
+  // ✅ Проверка доступа к премиум-вопросам
+  async checkQuestionsAccess(req, res) {
+    try {
+      const userId = req.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Не авторизован" });
+      }
+
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Пользователь не найден" });
+      }
+
+      const now = new Date();
+      const isExpired = user.subscriptionEndDate && now > user.subscriptionEndDate;
+      const hasAccess = user.subscriptionType !== "none" && !isExpired;
+
+      return res.json({
+        hasAccess,
+        subscriptionType: hasAccess ? user.subscriptionType : "none",
+        daysRemaining: hasAccess
+          ? Math.ceil((user.subscriptionEndDate - now) / (1000 * 60 * 60 * 24))
+          : 0,
+      });
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json({ message: "Не удалось проверить доступ" });
+    }
+  }
 }
 
 module.exports = new UserController();

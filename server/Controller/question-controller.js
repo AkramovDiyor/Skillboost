@@ -105,6 +105,10 @@ function shuffleArray(array) {
   }
   return array;
 }
+
+
+
+
 class QuestionController {
   async getAllQuestions(req, res) {
     try {
@@ -208,7 +212,33 @@ class QuestionController {
     }
   }
 
+  async togglePremiumQuestions(req, res) {
+    try {
+      const { ids, value = true } = req.body;
 
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ 
+          message: "Необходимо передать массив ids" 
+        });
+      }
+
+      const result = await Question.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isPremium: !!value } }
+      );
+
+      res.status(200).json({
+        message: `✅ Обновлено ${result.modifiedCount} вопросов (isPremium: ${value})`,
+        modifiedCount: result.modifiedCount,
+      });
+    } catch (error) {
+      console.error("❌ Ошибка toggle premium:", error);
+      res.status(500).json({ 
+        message: "Ошибка при обновлении", 
+        error: error.message 
+      });
+    }
+  }
 
   async catigoryquestion(req, res) {
     try {

@@ -50,6 +50,19 @@ const UserSchema = new Schema(
         ref: "Question", // название модели вопроса
       },
     ], 
+    subscriptionType: {
+      type: String,
+      enum: ["none", "standard", "premium"],
+      default: "none",
+    },
+    subscriptionEndDate: {
+      type: Date,
+      default: null,
+    },
+    subscriptionStartDate: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { questionsApi } from "../../shared/api/questions";
-import { bookmarksApi } from "../../shared/api/bookmarks"; // 👈 Добавляем API для закладок
+import { bookmarksApi } from "../../shared/api/bookmarks";
 import { IoMdBookmark } from "react-icons/io";
 import { BsBookmark } from "react-icons/bs";
+import { FaLock } from "react-icons/fa"; 
 import { SkeletonCard } from "../../shared/ui/Skeleton/SkeletonCard";
 
 function QuestionsPage() {
@@ -22,17 +23,14 @@ function QuestionsPage() {
 
   const difficultyLevels = ["Стажёр", "Junior", "Middle", "Senior"];
 
-
   useEffect(() => {
     const fetchBookmarks = async () => {
       try {
         setBookmarksLoading(true);
         const data = await bookmarksApi.getAll();
-
         setBookmarks(data.map(q => q._id));
       } catch (error) {
         console.error("Ошибка при получении закладок:", error);
-
         setBookmarks([]);
       } finally {
         setBookmarksLoading(false);
@@ -42,11 +40,9 @@ function QuestionsPage() {
     fetchBookmarks();
   }, []);
 
-
   const toggleBookmark = async (question) => {
     const questionId = question._id;
     const wasBookmarked = bookmarks.includes(questionId);
-
 
     if (wasBookmarked) {
       setBookmarks(bookmarks.filter(id => id !== questionId));
@@ -55,10 +51,8 @@ function QuestionsPage() {
     }
 
     try {
-  
       const response = await bookmarksApi.toggle(questionId);
       
- 
       if (response.isBookmarked !== !wasBookmarked) {
         setBookmarks(response.isBookmarked 
           ? [...bookmarks, questionId]
@@ -74,7 +68,6 @@ function QuestionsPage() {
         setBookmarks(bookmarks.filter(id => id !== questionId));
       }
       
-  
       alert("Не удалось обновить закладку. Попробуйте ещё раз.");
     }
   };
@@ -101,7 +94,6 @@ function QuestionsPage() {
     setDifficulty(level);
     navigate(`?difficulty=${encodeURIComponent(level)}`);
   };
-
 
   const isBookmarked = (questionId) => {
     return bookmarks.includes(questionId);
@@ -196,70 +188,87 @@ function QuestionsPage() {
           <p>Вопросов по выбранным фильтрам не найдено</p>
         )}
 
-        {!loading && questions.map((question, index) => (
-          <section 
-            key={question._id} 
-            className="scroll-my-[75px] shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1),_0_10px_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none dark:border dark:border-surface-500 w-full py-2 px-4 rounded-2xl my-4"
-          >
-            <section className="relative w-full">
-              <section className="flex flex-col gap-3 pt-4 pb-2">
-                <section className="flex flex-col gap-2 text-sm">
-                  <header className="text-xl font-medium flex gap-2 items-center">
-                    <span className="min-w-[10px] min-h-[10px] inline-block rounded-full bg-gray-300"></span>
-                    <section className="flex items-center gap-2 relative support-selectable">
-                      <section>
-                        <h2 className="font-normal">{question.title}</h2>
+        {!loading && questions.map((question, index) => {
+          const isPremium = question.isPremium === true; // 👈 Проверяем isPremium
+          
+          return (
+            <section 
+              key={question._id} 
+              className="scroll-my-[75px] shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1),_0_10px_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none dark:border dark:border-surface-500 w-full py-2 px-4 rounded-2xl my-4 relative"
+            >
+              <section className="relative w-full">
+                <section className="flex flex-col gap-3 pt-4 pb-2">
+                  <section className="flex flex-col gap-2 text-sm">
+                    <header className="text-xl font-medium flex gap-2 items-center">
+                      <span className="min-w-[10px] min-h-[10px] inline-block rounded-full bg-gray-300"></span>
+                      <section className="flex items-center gap-2 relative support-selectable">
+                        <section>
+                          <h2 className="font-normal">{question.title}</h2>
+                        </section>
                       </section>
-                    </section>
-                    <section className="relative inline-flex ml-auto">
-                      <button
-                        onClick={() => toggleBookmark(question)}
-                        disabled={bookmarksLoading} // Блокируем пока грузятся закладки
-                        aria-label="Добавить в избранное"
-                        className="relative flex items-center justify-center disabled:opacity-50"
-                      >
-                        {isBookmarked(question._id) ? (
-                          <IoMdBookmark className="text-[20px] cursor-pointer text-[var(--color-main)]" />
-                        ) : (
-                          <BsBookmark className="text-[20px] cursor-pointer text-[var(--color-text)]" />
-                        )}
-                      </button>
-                    </section>
-                  </header>
+                      <section className="relative inline-flex ml-auto">
+                        <button
+                          onClick={() => toggleBookmark(question)}
+                          disabled={bookmarksLoading}
+                          aria-label="Добавить в избранное"
+                          className="relative flex items-center justify-center disabled:opacity-50"
+                        >
+                          {isBookmarked(question._id) ? (
+                            <IoMdBookmark className="text-[20px] cursor-pointer text-[var(--color-main)]" />
+                          ) : (
+                            <BsBookmark className="text-[20px] cursor-pointer text-[var(--color-text)]" />
+                          )}
+                        </button>
+                      </section>
+                    </header>
 
-                  <div className="rounded-2xl p-0.5 px-3 w-fit font-medium text-base bg-[var(--bg-02)]">
-                    {question.difficulty}
-                  </div>
-                  <div>
-                    Рейтинг вопроса:
-                    <span className="font-medium">{question.rating}</span>
-                  </div>
+                    <div className="rounded-2xl p-0.5 px-3 w-fit font-medium text-base bg-[var(--bg-02)]">
+                      {question.difficulty}
+                    </div>
+                    <div>
+                      Рейтинг вопроса:
+                      <span className="font-medium">{question.rating}</span>
+                    </div>
+                  </section>
+
+                  {visibleAnswerIndex === index ? (
+                    <div className="answer-box">
+                      <p>
+                        <strong>Ответ:</strong> {question.answer}
+                      </p>
+                      <button
+                        className="flex gap-1 items-center text-slate-500 dark:text-slate-400 hover:underline hover:decoration-1 hover:decoration-slate-300 hover:underline-offset-4 mt-2"
+                        onClick={() => setVisibleAnswerIndex(null)}
+                      >
+                        Скрыть ответ
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      className={`flex gap-1 items-center text-slate-500 dark:text-slate-400 hover:underline hover:decoration-1 hover:decoration-slate-300 hover:underline-offset-4 ${isPremium ? 'cursor-not-allowed opacity-50' : ''}`}
+                      onClick={() => !isPremium && setVisibleAnswerIndex(index)}
+                      disabled={isPremium}
+                    >
+                      {isPremium ? 'Показать ответ' : 'Показать ответ'}
+                    </button>
+                  )}
                 </section>
 
-                {visibleAnswerIndex === index ? (
-                  <div className="answer-box">
-                    <p>
-                      <strong>Ответ:</strong> {question.answer}
-                    </p>
-                    <button
-                      className="flex gap-1 items-center text-slate-500 dark:text-slate-400 hover:underline hover:decoration-1 hover:decoration-slate-300 hover:underline-offset-4 mt-2"
-                      onClick={() => setVisibleAnswerIndex(null)}
-                    >
-                      Скрыть ответ
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    className="flex gap-1 items-center text-slate-500 dark:text-slate-400 hover:underline hover:decoration-1 hover:decoration-slate-300 hover:underline-offset-4"
-                    onClick={() => setVisibleAnswerIndex(index)}
-                  >
-                    Посмотреть ответ
-                  </button>
-                )}
               </section>
+                {/* 👇 Премиум оверлей */}
+                {isPremium && (
+                  <div className="p-0 absolute inset-0 bg-[var(--bg-03)]/80 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-10">
+                    <div className="flex flex-col items-center gap-3 text-center px-4">
+                      <FaLock className="text-3xl text-[var(--tag-red-border)]" />
+                      <p className="text-lg font-medium text-[var(--tag-red-border)]">
+                        Вопрос доступен <Link to={'/subscription'} className="underline">по подписке</Link> 
+                      </p>
+                    </div>
+                  </div>
+                )}
             </section>
-          </section>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -13,6 +13,10 @@ const QuestionSchema = new mongoose.Schema({
     type: String,
   }, 
   createdAt: { type: Date, default: Date.now },
+  isPremium: { 
+    type: Boolean, 
+    default: false 
+  },
 });
 
 module.exports = mongoose.model("Question", QuestionSchema);
