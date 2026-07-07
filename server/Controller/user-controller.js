@@ -3,13 +3,13 @@ const UserModel = require("../Models/User-models");
 class UserController {
   // ... другие методы ...
 
-  // ✅ Получить все закладки пользователя
+  //   Получить все закладки пользователя
   async getBookmarks(req, res) {
     try {
       const userId = req.userId; // из middleware авторизации
-      
+
       const user = await UserModel.findById(userId).populate("bookmarks");
-      
+
       if (!user) {
         return res.status(404).json({ message: "Пользователь не найден" });
       }
@@ -22,7 +22,7 @@ class UserController {
     }
   }
 
-  // ✅ Toggle: добавить или убрать из избранного
+  //   Toggle: добавить или убрать из избранного
   async toggleBookmark(req, res) {
     try {
       const userId = req.userId; // ID из auth middleware
@@ -31,7 +31,7 @@ class UserController {
         console.log("❌ No userId");
         return res.status(401).json({ message: "Не авторизован" });
       }
-  
+
       if (!questionId) {
         console.log("❌ No questionId");
         return res.status(400).json({ message: "Не указан ID вопроса" });
@@ -117,7 +117,7 @@ class UserController {
     }
   }
 
-  // ✅ Получить текущую подписку
+  //   Получить текущую подписку
   async getSubscription(req, res) {
     try {
       const userId = req.userId;
@@ -148,8 +148,8 @@ class UserController {
         startDate: user.subscriptionStartDate,
         endDate: user.subscriptionEndDate,
         isActive: !isExpired && user.subscriptionType !== "none",
-        daysRemaining: isExpired 
-          ? 0 
+        daysRemaining: isExpired
+          ? 0
           : Math.ceil((user.subscriptionEndDate - now) / (1000 * 60 * 60 * 24)),
       });
     } catch (e) {
@@ -158,7 +158,7 @@ class UserController {
     }
   }
 
-  // ✅ Проверка доступа к премиум-вопросам
+  //   Проверка доступа к премиум-вопросам
   async checkQuestionsAccess(req, res) {
     try {
       const userId = req.userId;
@@ -186,6 +186,50 @@ class UserController {
     } catch (e) {
       console.log(e);
       return res.status(500).json({ message: "Не удалось проверить доступ" });
+    }
+  }
+
+  //   Отмена подписки
+  async cancelSubscription(req, res) {
+    try {
+      const userId = req.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Не авторизован" });
+      }
+
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Пользователь не найден" });
+      }
+
+      // Проверяем, есть ли активная подписка
+      const now = new Date();
+      const isExpired = user.subscriptionEndDate && now > user.subscriptionEndDate;
+
+      if (user.subscriptionType === "none" || isExpired) {
+        return res.status(400).json({
+          message: "У вас нет активной подписки"
+        });
+      }
+
+      // Сохраняем информацию о том, что подписка была отменена
+      const previousSubscription = user.subscriptionType;
+
+      // Сбрасываем подписку
+      user.subscriptionType = "none";
+      user.subscriptionStartDate = null;
+      user.subscriptionEndDate = null;
+      await user.save();
+
+      return res.json({
+        success: true,
+        message: `Подписка ${previousSubscription} успешно отменена`,
+        previousSubscription,
+      });
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json({ message: "Не удалось отменить подписку" });
     }
   }
 }

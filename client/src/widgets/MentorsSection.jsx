@@ -84,7 +84,7 @@ const MentorCard = ({ mentor }) => (
       <section className="flex justify-between items-center gap-2 text-base font-semibold">
         <span>Стоимость: {mentor.price}</span>
       </section>
-      <p className="text-[var(--color-text)] -mt-2 mb-2">✅ Первое занятие бесплатно</p>
+      <p className="text-[var(--color-text)] -mt-2 mb-2">  Первое занятие бесплатно</p>
       <div className="flex mt-3 justify-center">
         <a
           href={mentor.link}
@@ -99,17 +99,17 @@ const MentorCard = ({ mentor }) => (
 
 export default function MentorsSection() {
 
-      const carouselRef = useRef(null);
-    
-      const scroll = (direction) => {
-        const container = carouselRef.current;
-        if (!container) return;
-        const scrollAmount = container.clientWidth; // прокрутка на ширину видимой области
-        container.scrollBy({
-          left: direction === "left" ? -scrollAmount : scrollAmount,
-          behavior: "smooth",
-        });
-      };
+  const carouselRef = useRef(null);
+
+  const scroll = (direction) => {
+    const container = carouselRef.current;
+    if (!container) return;
+    const scrollAmount = container.clientWidth; // прокрутка на ширину видимой области
+    container.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
+  };
 
 
   return (
@@ -121,7 +121,7 @@ export default function MentorsSection() {
         </h3>
       </header>
 
-            {/* Кнопки навигации */}
+      {/* Кнопки навигации */}
       <article className="hidden sm:flex place-self-end gap-2">
         <button
           onClick={() => scroll("left")}
@@ -155,7 +155,7 @@ export default function MentorsSection() {
         </button>
       </article>
 
-      <div  ref={carouselRef} className="flex gap-5 pb-4 sm:pb-0 overflow-x-auto sm:overflow-x-hidden scrollbar-hide mt-2">
+      <div ref={carouselRef} className="flex gap-5 pb-4 sm:pb-0 overflow-x-auto sm:overflow-x-hidden scrollbar-hide mt-2">
         {mentors.map((mentor, index) => (
           <MentorCard key={index} mentor={mentor} />
         ))}

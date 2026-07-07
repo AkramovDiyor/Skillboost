@@ -6,10 +6,10 @@ const Question = require("../Models/question-models");
 function getAllowedLevels(selectedLevel) {
   // Нормализация написания
   const normalized = selectedLevel.replace("ё", "е").toLowerCase();
-  
+
   // Иерархия уровней
   const hierarchy = ["стажер", "junior", "middle", "senior"];
-  
+
   // Оригинальные названия для БД (с "ё" где нужно)
   const originalNames = {
     "стажер": "Стажер",
@@ -17,12 +17,12 @@ function getAllowedLevels(selectedLevel) {
     "middle": "Middle",
     "senior": "Senior",
   };
-  
+
   const index = hierarchy.indexOf(normalized);
   if (index === -1) return [selectedLevel]; // неизвестный уровень — строгий фильтр
-  
+
   let allowed = [];
-  
+
   switch (normalized) {
     case "стажер":
       // Стажёр получает вопросы своего уровня + Junior
@@ -43,7 +43,7 @@ function getAllowedLevels(selectedLevel) {
     default:
       allowed = [normalized];
   }
-  
+
   return allowed.map(l => originalNames[l]);
 }
 
@@ -56,27 +56,27 @@ function prioritizeByLevel(questions, selectedLevel) {
     // Если уровень не выбран — просто перемешиваем
     return shuffleArray(questions);
   }
-  
+
   const allowedLevels = getAllowedLevels(selectedLevel);
   const mainLevel = selectedLevel;
-  
+
   // Разделяем вопросы на основной уровень и соседние
-  const mainLevelQuestions = questions.filter(q => 
+  const mainLevelQuestions = questions.filter(q =>
     q.difficulty === mainLevel || q.level === mainLevel
   );
-  const otherLevelQuestions = questions.filter(q => 
+  const otherLevelQuestions = questions.filter(q =>
     !mainLevelQuestions.includes(q)
   );
-  
+
   // Перемешиваем обе группы
   shuffleArray(mainLevelQuestions);
   shuffleArray(otherLevelQuestions);
-  
+
   // Чередование: 3 вопроса основного уровня → 2 соседнего → и т.д.
   const result = [];
   let mainIdx = 0;
   let otherIdx = 0;
-  
+
   while (result.length < questions.length) {
     // 3 из основного
     for (let i = 0; i < 3 && mainIdx < mainLevelQuestions.length; i++) {
@@ -91,7 +91,7 @@ function prioritizeByLevel(questions, selectedLevel) {
       break;
     }
   }
-  
+
   return result;
 }
 
@@ -122,11 +122,11 @@ class QuestionController {
   async createQuestion(req, res) {
     try {
       const questions = req.body;
-  
+
       if (!Array.isArray(questions)) {
         return res.status(400).json({ message: "Должен быть массив вопросов" });
       }
-  
+
       const difficultyMap = {
         "0": "Стажер",
         "1": "Junior",
@@ -134,7 +134,7 @@ class QuestionController {
         "3": "Middle",
         "4": "Senior",
       };
-  
+
       // Маппинг технологий → направление
       const directionMap = {
         // Frontend
@@ -147,7 +147,7 @@ class QuestionController {
         "Next.js": "Frontend",
         "Svelte": "Frontend",
         "Frontend": "Frontend",
-        
+
         // Backend
         "Node.js": "Backend",
         "Python": "Backend",
@@ -171,7 +171,7 @@ class QuestionController {
         "Micronaut": "Backend",
         "Quarkus": "Backend",
         "Backend": "Backend",
-        
+
         // Fullstack
         "MERN": "Fullstack",
         "MEVN": "Fullstack",
@@ -181,7 +181,7 @@ class QuestionController {
         "Remix": "Fullstack",
         "Fullstack": "Fullstack",
       };
-  
+
       const formattedQuestions = questions.map((q) => {
         // Определяем direction автоматически
         let direction = q.direction;
@@ -192,18 +192,18 @@ class QuestionController {
             directionMap[q.category] ||
             "Frontend";
         }
-  
+
         return {
           ...q,
           direction,
           difficulty: difficultyMap[q.rating] || q.difficulty || "Junior",
         };
       });
-  
+
       const savedQuestions = await Question.insertMany(formattedQuestions);
-  
+
       res.status(201).json({
-        message: `✅ Добавлено ${savedQuestions.length} вопросов`,
+        message: `  Добавлено ${savedQuestions.length} вопросов`,
         data: savedQuestions,
       });
     } catch (error) {
@@ -217,8 +217,8 @@ class QuestionController {
       const { ids, value = true } = req.body;
 
       if (!Array.isArray(ids) || ids.length === 0) {
-        return res.status(400).json({ 
-          message: "Необходимо передать массив ids" 
+        return res.status(400).json({
+          message: "Необходимо передать массив ids"
         });
       }
 
@@ -228,38 +228,38 @@ class QuestionController {
       );
 
       res.status(200).json({
-        message: `✅ Обновлено ${result.modifiedCount} вопросов (isPremium: ${value})`,
+        message: `  Обновлено ${result.modifiedCount} вопросов (isPremium: ${value})`,
         modifiedCount: result.modifiedCount,
       });
     } catch (error) {
       console.error("❌ Ошибка toggle premium:", error);
-      res.status(500).json({ 
-        message: "Ошибка при обновлении", 
-        error: error.message 
+      res.status(500).json({
+        message: "Ошибка при обновлении",
+        error: error.message
       });
     }
   }
 
   async catigoryquestion(req, res) {
     try {
-      const { 
-        count = 15, 
+      const {
+        count = 15,
         category,
         technologies,
         frameworks,
         level
       } = req.query;
-  
+
       console.log("🔍 Параметры с фронта:", { category, technologies, frameworks, level });
-  
+
       const filter = {};
       const andConditions = [];
-  
+
       // 1. Фильтр по направлению
       if (category && category !== "all") {
         andConditions.push({ direction: category });
       }
-  
+
       // 2. Фильтр по технологии
       if (technologies && technologies !== "all") {
         andConditions.push({
@@ -269,7 +269,7 @@ class QuestionController {
           ],
         });
       }
-  
+
       // 3. Фильтр по фреймворку
       if (frameworks && frameworks !== "all") {
         andConditions.push({
@@ -279,14 +279,14 @@ class QuestionController {
           ],
         });
       }
-  
+
       // 4. 🟢 УМНЫЙ фильтр по уровню
       if (level && level !== "all") {
         // Определяем допустимые уровни на основе выбранного
         const allowedLevels = getAllowedLevels(level);
-        
+
         console.log(`🎯 Выбран уровень: "${level}" → допустимые: [${allowedLevels.join(", ")}]`);
-  
+
         andConditions.push({
           $or: [
             { difficulty: { $in: allowedLevels } },
@@ -294,33 +294,33 @@ class QuestionController {
           ],
         });
       }
-  
+
       // Собираем финальный фильтр
       if (andConditions.length === 1) {
         Object.assign(filter, andConditions[0]);
       } else if (andConditions.length > 1) {
         filter.$and = andConditions;
       }
-  
+
       console.log("📊 Итоговый фильтр:", JSON.stringify(filter, null, 2));
-  
+
       const questionCount = Math.min(Number(count), 50);
       const allQuestions = await Question.find(filter).lean();
-  
+
       // 🟢 УМНОЕ ПЕРЕМЕШИВАНИЕ с приоритетом основного уровня
       const prioritized = prioritizeByLevel(allQuestions, level);
-  
+
       const questions = prioritized.slice(0, questionCount);
-  
-      console.log(`✅ Найдено: ${questions.length} вопросов`);
-  
+
+      console.log(`  Найдено: ${questions.length} вопросов`);
+
       if (questions.length === 0) {
         return res.json({
           questions: [],
           message: "Нет вопросов по заданным фильтрам",
         });
       }
-  
+
       res.json(questions);
     } catch (error) {
       console.error("❌ Ошибка:", error);
@@ -332,7 +332,7 @@ class QuestionController {
     try {
       const { tech, difficulty } = req.query;
       const filter = {};
-      
+
       if (tech) filter.category = new RegExp(`^${tech}$`, 'i');
       if (difficulty) filter.difficulty = difficulty;
 

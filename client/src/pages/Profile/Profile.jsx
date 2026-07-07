@@ -1,16 +1,25 @@
 import React, { useState, useEffect } from "react";
 import { FaUser } from "react-icons/fa";
 import { IoMdBookmark } from "react-icons/io";
+import { MdOutlineSubscriptions } from "react-icons/md";
 import Edit from "./Edit/Edit";
-import { useNavigate } from "react-router-dom";
-import { bookmarksApi } from "../../shared/api/bookmarks"; // 👈 Добавляем API
+import { useNavigate, Link } from "react-router-dom";
+import { bookmarksApi } from "../../shared/api/bookmarks";
+import { useSubscription } from "../../shared/hooks/useSubscription";
+import { subscriptionApi } from "../../shared/api/subscription";
 
 const Profile = () => {
   const [edit, setEdit] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [visibleAnswerIndex, setVisibleAnswerIndex] = useState(null);
   const [bookmarks, setBookmarks] = useState([]);
-  const [bookmarksLoading, setBookmarksLoading] = useState(true); 
+  const [bookmarksLoading, setBookmarksLoading] = useState(true);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  
+
+  const { subscription, loading: subscriptionLoading, refresh } = useSubscription();
+  
   const storedData = JSON.parse(localStorage.getItem("data")) || {};
   const avatarUrl = storedData.avatarUrl ? storedData.avatarUrl : null;
 
@@ -22,7 +31,7 @@ const Profile = () => {
       try {
         setBookmarksLoading(true);
         const data = await bookmarksApi.getAll();
-        setBookmarks(data); 
+        setBookmarks(data);
       } catch (error) {
         console.error("Ошибка при получении закладок:", error);
         setBookmarks([]);
@@ -34,9 +43,7 @@ const Profile = () => {
     fetchBookmarks();
   }, []);
 
-
   const removeBookmark = async (questionId) => {
-
     const updatedBookmarks = bookmarks.filter(item => item._id !== questionId);
     setBookmarks(updatedBookmarks);
 
@@ -44,9 +51,25 @@ const Profile = () => {
       await bookmarksApi.toggle(questionId);
     } catch (error) {
       console.error("Ошибка при удалении из избранного:", error);
-
       setBookmarks(bookmarks);
       alert("Не удалось удалить из избранного");
+    }
+  };
+
+
+  const handleCancelSubscription = async () => {
+    setCancelLoading(true);
+    try {
+      const result = await subscriptionApi.cancel();
+      if (result.success) {
+     
+        await refresh();
+        setShowCancelModal(false);
+      }
+    } catch (error) {
+      console.error("Ошибка отмены подписки:", error);
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -60,6 +83,116 @@ const Profile = () => {
     { id: 0, title: "Информация" },
     { id: 1, title: "Избранное" },
   ];
+
+  const formatEndDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("ru-RU", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  const renderSubscriptionBlock = () => {
+    if (subscriptionLoading) {
+      return (
+        <section className="flex flex-col gap-3 border border-[var(--color-text)] p-3 md:p-4 dark:bg-st-white-T5 rounded-2xl animate-pulse">
+          <div className="h-6 bg-gray-300 rounded w-1/3"></div>
+          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+        </section>
+      );
+    }
+
+    const isActive = subscription?.isActive;
+    const isStandard = subscription?.subscriptionType === "standard";
+    const isPremium = subscription?.subscriptionType === "premium";
+
+    return (
+      <section 
+        className={`flex flex-col gap-3 border p-3 md:p-4 dark:bg-st-white-T5 rounded-2xl ${
+          isActive 
+            ? isPremium 
+              ? "border-purple-500 bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/20 dark:to-transparent"
+              : "border-green-500 bg-gradient-to-br from-green-50 to-white dark:from-green-900/20 dark:to-transparent"
+            : "border-[var(--color-text)]"
+        }`}
+      >
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h3 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
+            <MdOutlineSubscriptions className="text-[var(--color-main)]" />
+            Подписка
+          </h3>
+          
+          {isActive && (
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+              isPremium 
+                ? "bg-purple-500 text-white" 
+                : "bg-green-500 text-white"
+            }`}>
+              {isPremium ? " Премиум" : "Стандарт"}
+            </span>
+          )}
+        </div>
+
+        {isActive ? (
+          <>
+            <div className="flex flex-col gap-2 mt-2">
+              <div className="flex justify-between items-center">
+                <span className="text-[#6e8a9e]">Статус:</span>
+                <span className="text-green-500 font-bold flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                  Активна
+                </span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-[#6e8a9e]">Действует до:</span>
+                <span className="font-bold text-[var(--color-text)]">
+                  {formatEndDate(subscription.endDate)}
+                </span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-[#6e8a9e]">Осталось дней:</span>
+                <span className={`font-bold ${
+                  subscription.daysRemaining <= 3 ? "text-red-500" : "text-[var(--color-text)]"
+                }`}>
+                  {subscription.daysRemaining} {subscription.daysRemaining === 1 ? "день" : subscription.daysRemaining < 5 ? "дня" : "дней"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => setShowCancelModal(true)}
+                className="flex-1 border border-red-500 text-red-500 py-2 px-4 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer font-medium"
+              >
+                Отменить подписку
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col gap-2 mt-2">
+              <p className="text-[#6e8a9e]">
+                У вас нет активной подписки. Оформите подписку, чтобы получить доступ ко всем вопросам.
+              </p>
+            </div>
+
+            <div className="flex gap-2 mt-3">
+              <Link 
+                to="/subscription" 
+                className="flex-1 bg-[var(--color-main)] text-white py-2 px-4 rounded-lg hover:opacity-90 transition-opacity text-center font-medium"
+              >
+                Оформить подписку
+              </Link>
+            </div>
+          </>
+        )}
+      </section>
+    );
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -111,6 +244,8 @@ const Profile = () => {
                 </section>
               </section>
 
+              {renderSubscriptionBlock()}
+
               <section className="flex flex-col gap-3 border border-[var(--color-text)] p-3 md:p-4 dark:bg-st-white-T5 rounded-2xl">
                 <h3 className="text-2xl font-bold text-[var(--color-text)]">О себе</h3>
                 <p className="text-[#6e8a9e]">
@@ -149,7 +284,6 @@ const Profile = () => {
         return (
           <div className="p-4">
             <h3 className="text-xl font-bold mb-3 text-[var(--color-text)]">Избранное</h3>
-            
 
             {bookmarksLoading ? (
               <div className="text-center py-8 text-gray-400">
@@ -291,6 +425,37 @@ const Profile = () => {
           <div>
             {renderTabContent()}
           </div>
+
+          {showCancelModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full">
+                <h3 className="text-xl font-bold mb-4 text-[var(--color-text)]">
+                  Отменить подписку?
+                </h3>
+                <p className="text-[#6e8a9e] mb-6">
+                  После отмены вы потеряете доступ к премиум-вопросам. 
+                  Оставшиеся дни не будут компенсированы.
+                </p>
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowCancelModal(false)}
+                    disabled={cancelLoading}
+                    className="flex-1 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-[var(--color-text)]"
+                  >
+                    Оставить подписку
+                  </button>
+                  <button
+                    onClick={handleCancelSubscription}
+                    disabled={cancelLoading}
+                    className="flex-1 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-50 transition-colors"
+                  >
+                    {cancelLoading ? "Отмена..." : "Отменить"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </>

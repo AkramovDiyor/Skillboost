@@ -6,7 +6,7 @@ const QuestionController = require("../Controller/question-controller.js");
 const EditController = require('../Controller/edit-controller.js');
 const upload = require("../Controller/middlewares/upload.js");
 const checkAuth = require('../Controller/middlewares/checkAuth.js');
-// const { checkSubscription } = require('../Controller/middlewares/checkAuth.js'); // ✅ Исправлен путь
+// const { checkSubscription } = require('../Controller/middlewares/checkAuth.js'); //   Исправлен путь
 const UserController = require("../Controller/user-controller.js");
 
 router.post("/auth/register", AuthController.register);
@@ -24,6 +24,7 @@ router.patch("/questions/premium/toggle", QuestionController.togglePremiumQuesti
 router.post("/subscription/purchase", checkAuth, UserController.purchaseSubscription);
 router.get("/subscription", checkAuth, UserController.getSubscription);
 router.get("/subscription/check-questions-access", checkAuth, UserController.checkQuestionsAccess);
+router.post("/subscription/cancel", checkAuth, UserController.cancelSubscription);
 
 router.put(
   "/profile/edit",

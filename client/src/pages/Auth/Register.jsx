@@ -4,10 +4,10 @@ import { authApi } from "../../shared/api/auth";
 
 const Register = () => {
   const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState(""); 
+  const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false); 
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,23 +17,23 @@ const Register = () => {
     }
   }, [navigate]); // 👈 Добавили navigate в зависимости
 
-  // ✅ Чистая функция валидации (как в Login)
+  //   Чистая функция валидации (как в Login)
   const validateForm = () => {
     if (!email.trim()) return "Пожалуйста, введите email.";
-    
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return "Некорректный формат email.";
-    
+
     if (!fullName.trim()) return "Пожалуйста, введите имя.";
-    
+
     if (password.length < 6) return "Пароль должен содержать минимум 6 символов.";
-    
+
     return "";
   };
 
   const handlePost = async (e) => {
     e.preventDefault();
-    
+
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
@@ -42,14 +42,14 @@ const Register = () => {
 
     setIsLoading(true);
     setError("");
-  
+
     try {
       const { data } = await authApi.register({ email, fullName, password });
-  
+
       console.log("Success");
       localStorage.setItem("data", JSON.stringify(data));
       navigate("/profile");
-  
+
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.message || "Произошла ошибка при регистрации";
       setError(errorMessage);
@@ -59,7 +59,7 @@ const Register = () => {
     }
   };
 
-  // ✅ Обработчики для сброса ошибок при вводе
+  //   Обработчики для сброса ошибок при вводе
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
     if (error) setError("");
@@ -136,7 +136,7 @@ const Register = () => {
 
           <button
             type="submit"
-            disabled={isLoading} 
+            disabled={isLoading}
             className="w-full py-3 mt-2 rounded-xl bg-[#049666] hover:bg-[#037a53] text-white font-semibold transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? "Регистрируемся..." : "Зарегистрироваться"}

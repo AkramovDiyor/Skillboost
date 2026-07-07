@@ -3,6 +3,8 @@ import ThemeSwitcher from "../features/ThemeSwitcher";
 import { useEffect, useRef, useState } from "react";
 import { IoIosContact } from "react-icons/io";
 import { linkList, interview, learning } from "../shared/data/headerData";
+import PremiumLink from "../shared/ui/PremiumLink";
+
 
 const Header = () => {
   const location = useLocation();
@@ -15,20 +17,16 @@ const Header = () => {
   const [isInterviewOpen, setIsInterviewOpen] = useState(false);
   const [isLearningOpen, setIsLearningOpen] = useState(false);
   
-  // Для анимации: меню монтируется сразу, но анимируется через класс
   const [menuAnimation, setMenuAnimation] = useState(false);
 
   const interviewDropdownRef = useRef(null);
   const learningDropdownRef = useRef(null);
 
-  // При открытии — запускаем анимацию, при закрытии — ждём конец анимации
   useEffect(() => {
     if (mobileMenuOpen) {
-      // Сначала монтируем, потом добавляем класс для анимации
       requestAnimationFrame(() => {
         setMenuAnimation(true);
       });
-      // Блокируем скролл страницы
       document.body.style.overflow = 'hidden';
     } else {
       setMenuAnimation(false);
@@ -40,12 +38,10 @@ const Header = () => {
     };
   }, [mobileMenuOpen]);
 
-  // Закрываем меню при смене роута
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
-  // Клик вне дропдаунов
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (interviewDropdownRef.current && !interviewDropdownRef.current.contains(event.target)) {
@@ -65,7 +61,6 @@ const Header = () => {
     };
   }, [isInterviewOpen, isLearningOpen]);
 
-  // Закрываем дропдауны при открытии мобильного меню
   useEffect(() => {
     if (mobileMenuOpen) {
       setIsInterviewOpen(false);
@@ -258,15 +253,11 @@ const Header = () => {
                 : 'translate-x-full'
             }`}
           >
-
             <div className="flex justify-between items-center p-4 border-b border-gray-700">
               <span className="text-lg font-semibold text-[var(--color-text)]">Меню</span>
-
             </div>
 
-
             <div className="p-4 space-y-3 overflow-y-auto h-[calc(100vh-64px)]">
-
               <div className="flex justify-between items-center border-b border-gray-700 pb-4">
                 {storedData ? (
                   <Link
@@ -289,29 +280,13 @@ const Header = () => {
                 <ThemeSwitcher />
               </div>
 
-              <Link
-                to="/subscription"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--bg-02)] transition-colors"
-              >
-                <svg
-                  width="20"
-                  height="19"
-                  viewBox="0 0 20 19"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="w-5 h-5"
-                >
-                  <path
-                    d="M9.04894 0.927052C9.3483 0.00574112 10.6517 0.00573993 10.9511 0.927051L12.4697 5.60081C12.6035 6.01284 12.9875 6.2918 13.4207 6.2918H18.335C19.3037 6.2918 19.7065 7.53141 18.9228 8.10081L14.947 10.9894C14.5966 11.244 14.4499 11.6954 14.5838 12.1074L16.1024 16.7812C16.4017 17.7025 15.3472 18.4686 14.5635 17.8992L10.5878 15.0106C10.2373 14.756 9.7627 14.756 9.41221 15.0106L5.43648 17.8992C4.65276 18.4686 3.59828 17.7025 3.89763 16.7812L5.41623 12.1074C5.55011 11.6954 5.40345 11.244 5.05296 10.9894L1.07722 8.10081C0.293507 7.53141 0.696283 6.2918 1.66501 6.2918H6.57929C7.01252 6.2918 7.39647 6.01284 7.53035 5.60081L9.04894 0.927052Z"
-                    fill="#FFB800"
-                  />
-                </svg>
-                <h3 className="font-normal text-[var(--color-text)]">Премиум</h3>
-              </Link>
+
+              <PremiumLink 
+                onClick={() => setMobileMenuOpen(false)} 
+                className="px-3 py-2 rounded-lg hover:bg-[var(--bg-02)]" 
+              />
 
               <div className="border-t border-gray-700 my-2" />
-
 
               {linkList.map(({ name, path }) => (
                 <Link
@@ -332,22 +307,8 @@ const Header = () => {
 
           {/* Справа — только для десктопа */}
           <section className="hidden lg:flex items-center gap-3">
-            <Link to="/subscription" className="flex items-center gap-2">
-              <svg
-                width="20"
-                height="19"
-                viewBox="0 0 20 19"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-5 h-5"
-              >
-                <path
-                  d="M9.04894 0.927052C9.3483 0.00574112 10.6517 0.00573993 10.9511 0.927051L12.4697 5.60081C12.6035 6.01284 12.9875 6.2918 13.4207 6.2918H18.335C19.3037 6.2918 19.7065 7.53141 18.9228 8.10081L14.947 10.9894C14.5966 11.244 14.4499 11.6954 14.5838 12.1074L16.1024 16.7812C16.4017 17.7025 15.3472 18.4686 14.5635 17.8992L10.5878 15.0106C10.2373 14.756 9.7627 14.756 9.41221 15.0106L5.43648 17.8992C4.65276 18.4686 3.59828 17.7025 3.89763 16.7812L5.41623 12.1074L1.07722 8.10081..."
-                  fill="#FFB800"
-                />
-              </svg>
-              <h3 className="font-normal text-[var(--color-text)]">Премиум</h3>
-            </Link>
+            {/* 👇 ЗАМЕНА: Используем PremiumLink вместо старого кода */}
+            <PremiumLink />
             
             {storedData ? (
               <Link to="/profile">

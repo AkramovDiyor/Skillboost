@@ -6,7 +6,6 @@ import Register from "../pages/Auth/Register.jsx";
 import Header from "../widgets/Header.jsx";
 import Dashboard from "../pages/Dashboard.jsx";
 import Footer from "../widgets/Footer.jsx";
-import Subscription from "../pages/Subscription.jsx";
 import QuestionsSection from "../widgets/QuestionsSection.js";
 import Profile from "../pages/Profile/Profile.jsx";
 import Interview from "../pages/Interview/Interview.jsx";
@@ -21,6 +20,7 @@ import Questions from "../pages/Questions/Questions.jsx";
 // import Coding from "../pages/Сoding.jsx";
 import { CodingPage } from "../pages/Coding/CodingPage.jsx";
 import Coding from "../pages/Coding/Сoding.jsx";
+import Subscription from "../pages/Subscription.jsx";
 
 const App = () => {
 

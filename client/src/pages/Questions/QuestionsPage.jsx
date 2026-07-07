@@ -6,6 +6,7 @@ import { IoMdBookmark } from "react-icons/io";
 import { BsBookmark } from "react-icons/bs";
 import { FaLock } from "react-icons/fa"; 
 import { SkeletonCard } from "../../shared/ui/Skeleton/SkeletonCard";
+import { useSubscription } from "../../shared/hooks/useSubscription";
 
 function QuestionsPage() {
   const { tech } = useParams(); 
@@ -19,8 +20,10 @@ function QuestionsPage() {
   const [bookmarks, setBookmarks] = useState([]); 
   const [bookmarksLoading, setBookmarksLoading] = useState(true); 
   
-  const [difficulty, setDifficulty] = useState(params.get("difficulty") || null);
+  const {subscription, loading: subscriptionLoading} = useSubscription()
+  const hasAccess = subscription.isActive
 
+  const [difficulty, setDifficulty] = useState(params.get("difficulty") || null);
   const difficultyLevels = ["Стажёр", "Junior", "Middle", "Senior"];
 
   useEffect(() => {
@@ -256,7 +259,7 @@ function QuestionsPage() {
 
               </section>
                 {/* 👇 Премиум оверлей */}
-                {isPremium && (
+                {isPremium && !hasAccess && (
                   <div className="p-0 absolute inset-0 bg-[var(--bg-03)]/80 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-10">
                     <div className="flex flex-col items-center gap-3 text-center px-4">
                       <FaLock className="text-3xl text-[var(--tag-red-border)]" />
