@@ -3,6 +3,7 @@ import { allCompanies, tasksData } from '../../shared/data/codingData';
 import LanguageSelect from '../../widgets/Coding/CodingLanguageSelect';
 import CodingTaskCard from '../../entities/CodingTaskCard';
 import { Link } from 'react-router-dom';
+import { useSubscription } from '../../shared/hooks/useSubscription'; 
 
 export default function Coding() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -12,19 +13,10 @@ export default function Coding() {
   const [maxHeight, setMaxHeight] = useState('60px');
   const contentRef = useRef(null);
 
-  // const companiesWithCount = useMemo(() => {
-  //   return allCompanies.map(company => ({
-  //     ...company,
-  //     count: tasksData.filter(task => 
-  //       task.companies.includes(company.name)
-  //     ).length
-  //   }))
-  // }, [])
+ 
+  const { subscription, loading } = useSubscription();
+  const hasAccess = subscription?.isActive;
 
-  
-
-
-  // Вычисляем реальную высоту контента при изменении
   useEffect(() => {
     if (contentRef.current) {
       const scrollHeight = contentRef.current.scrollHeight;
@@ -75,18 +67,16 @@ export default function Coding() {
           className="overflow-hidden transition-all duration-500 ease-in-out"
           style={{ maxHeight: maxHeight }}
         >
-          <div
-            ref={contentRef}
-            className="flex gap-2 flex-wrap pb-2"
-          >
+          <div ref={contentRef} className="flex gap-2 flex-wrap pb-2">
             {allCompanies.map((spec) => (
               <button
                 key={spec.name}
                 onClick={() => handleCompanyClick(spec.name)}
-                className={`${spec.name === activeCompany
+                className={`${
+                  spec.name === activeCompany
                     ? 'bg-[var(--bg-04)] text-[var(--bg-02)]'
                     : ''
-                  } py-[5px] flex items-center rounded-full px-3 text-center border hover:shadow transition-all duration-300`}
+                } py-[5px] flex items-center rounded-full px-3 text-center border hover:shadow transition-all duration-300`}
               >
                 {spec.icon && (
                   <span className="flex mr-1 bg-gray-100 rounded-full p-1 min-w-6 min-h-6 items-center justify-around">
@@ -145,13 +135,21 @@ export default function Coding() {
 
       {/* Сетка задач */}
       {filteredTasks.length > 0 ? (
-        <div className="w-full flex flex-col gap-4 rounded-2xl cursor-pointer">
-          {filteredTasks.map((task) => (
-            <Link to={`/coding/${task.id}`}>
+        <div className="w-full flex flex-col gap-4">
+          {filteredTasks.map((task) => {
+            const isPremiumLocked = task.isPremium && !hasAccess;
 
-              <CodingTaskCard key={task.id} task={task} />
-            </Link>
-          ))}
+
+            if (isPremiumLocked) {
+              return <CodingTaskCard key={task.id} task={task} isLocked />;
+            }
+
+            return (
+              <Link to={`/coding/${task.id}`} key={task.id}>
+                <CodingTaskCard task={task} />
+              </Link>
+            );
+          })}
         </div>
       ) : (
         <div className="text-center text-gray-500 mt-20">

@@ -1,12 +1,8 @@
-import React from 'react'
+import React from 'react';
+import { FaLock } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 
-// task.difficulty === 'Легкая'
-// ? 'bg-[#132C33] text-[#2CC36B]'
-// : task.difficulty === 'Средняя'
-// ? 'text-[#FE8901] bg-[#3F2B26]'
-// : 'bg-[#311C30] text-[#F05D5B]';
-
-const CodingTaskCard = ({ task }) => {
+const CodingTaskCard = ({ task, isLocked = false }) => {
   const getDifficultyStyles = (difficulty) => {
     switch (difficulty) {
       case 'Легкая':
@@ -39,14 +35,27 @@ const CodingTaskCard = ({ task }) => {
 
   return (
     <div
-      
-      className={`rounded-xl p-5 border border-gray-700 hover:border-gray-500 transition-colors`}
+      className={`relative rounded-xl p-5 border border-gray-700 hover:border-gray-500 transition-colors ${
+        isLocked ? 'cursor-not-allowed' : ''
+      }`}
     >
+
+      {isLocked && (
+        <div className="p-0 absolute inset-0 bg-[var(--bg-03)]/80 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-10">
+        <div className="flex flex-col items-center gap-3 text-center px-4">
+          <FaLock className="text-3xl text-[var(--tag-red-border)]" />
+          <p className="text-lg font-medium text-[var(--tag-red-border)]">
+            Вопрос доступен <Link to={'/subscription'} className="underline">по подписке</Link> 
+          </p>
+        </div>
+      </div>
+      )}
+
       <h3 className="text-lg font-medium text-[var(--color-text)] mb-2">
-        {task.isPremium ? 'Доступно по подписке' : task.title}
+        {task.title}
       </h3>
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-        {/* Блок сложности */}
+
         <div className={`flex items-center gap-1.5 ${styles.bg} p-1 px-2 rounded-xl sm:rounded-2xl`}>
           <span className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${styles.dot}`}></span>
           <span className={`text-[10px] sm:text-sm font-medium ${styles.text}`}>
@@ -54,7 +63,7 @@ const CodingTaskCard = ({ task }) => {
           </span>
         </div>
 
-        {/* Компании и процент */}
+
         <div className="flex items-center gap-2 text-[10px] sm:text-sm text-gray-400">
           <span className="bg-[var(--bg-03)] rounded-xl sm:rounded-2xl p-1 px-2 truncate max-w-[120px] sm:max-w-none">
             {task.companies.join(', ')}
@@ -64,7 +73,7 @@ const CodingTaskCard = ({ task }) => {
           </span>
         </div>
 
-        {/* Языки программирования */}
+     
         <div className="flex items-center gap-1.5">
           {task.languages.map((lang) => (
             <span
@@ -76,7 +85,6 @@ const CodingTaskCard = ({ task }) => {
           ))}
         </div>
       </div>
-
     </div>
   );
 };
