@@ -1,9 +1,9 @@
-import { api_local } from "./base";
+import { api_local, api } from "./base";
 
 export const subscriptionApi = {
   // Покупка подписки
   purchase: async (subscriptionType) => {
-    const { data } = await api_local.post("/subscription/purchase", {
+    const { data } = await api.post("/subscription/purchase", {
       subscriptionType,
     });
     return data;
@@ -11,19 +11,19 @@ export const subscriptionApi = {
 
   // Получить текущую подписку пользователя
   getSubscription: async () => {
-    const { data } = await api_local.get("/subscription");
+    const { data } = await api.get("/subscription");
     return data;
   },
 
   // Проверить доступ к премиум-вопросам
   checkQuestionsAccess: async () => {
-    const { data } = await api_local.get("/subscription/check-questions-access");
+    const { data } = await api.get("/subscription/check-questions-access");
     return data;
   },
 
     // Отменить подписку
   cancel: async () => {
-    const { data } = await api_local.post("/subscription/cancel");
+    const { data } = await api.post("/subscription/cancel");
     return data;
   },
 };
