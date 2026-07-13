@@ -1,44 +1,42 @@
-// shared/hooks/useSubscription.js
+
 import { useState, useEffect, useRef } from "react";
 import { subscriptionStore } from "../store/subscriptionStore";
 
 export function useSubscription() {
   const [state, setState] = useState(subscriptionStore.getState());
-  const prevTokenRef = useRef(null);
+  
+
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
+
     const unsubscribe = subscriptionStore.subscribe(() => {
       setState(subscriptionStore.getState());
     });
 
-    return unsubscribe;
-  }, []);
-
-  // 👇 Отслеживаем изменение токена
-  useEffect(() => {
-    const storedRaw = localStorage.getItem("data");
-    const currentToken = storedRaw ? JSON.parse(storedRaw)?.token : null;
-    
-    // Если токен изменился (вошли или вышли) — перезагружаем подписку
-    if (currentToken !== prevTokenRef.current) {
-      prevTokenRef.current = currentToken;
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
       
-      if (currentToken) {
-        // Пользователь вошёл — загружаем подписку
+      const storedRaw = localStorage.getItem("data");
+      const token = storedRaw ? JSON.parse(storedRaw)?.token : null;
+      
+      if (token) {
+
         subscriptionStore.loadSubscription();
       } else {
-        // Пользователь вышел — сбрасываем состояние
-        setState({
-          subscription: { subscriptionType: "none", isActive: false, daysRemaining: 0 },
-          loading: false,
-        });
+    
+        subscriptionStore.loadSubscription(); 
       }
     }
-  });
+
+
+    return unsubscribe;
+  }, []); 
 
   return {
     subscription: state.subscription,
     loading: state.loading,
-    refresh: subscriptionStore.loadSubscription,
+  
+    refresh: () => subscriptionStore.loadSubscription(true),
   };
 }

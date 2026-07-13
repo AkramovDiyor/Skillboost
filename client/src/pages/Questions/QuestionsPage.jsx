@@ -248,11 +248,11 @@ function QuestionsPage() {
                     </div>
                   ) : (
                     <button
-                      className={`flex gap-1 items-center text-slate-500 dark:text-slate-400 hover:underline hover:decoration-1 hover:decoration-slate-300 hover:underline-offset-4 ${isPremium ? 'cursor-not-allowed opacity-50' : ''}`}
-                      onClick={() => !isPremium && setVisibleAnswerIndex(index)}
-                      disabled={isPremium}
+                      className={`flex gap-1 items-center text-slate-500 dark:text-slate-400 hover:underline hover:decoration-1 hover:decoration-slate-300 hover:underline-offset-4 `}
+                      onClick={() =>  setVisibleAnswerIndex(index)}
+      
                     >
-                      {isPremium ? 'Показать ответ' : 'Показать ответ'}
+                      Показать ответ
                     </button>
                   )}
                 </section>

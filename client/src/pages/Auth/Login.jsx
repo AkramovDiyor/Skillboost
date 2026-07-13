@@ -12,6 +12,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+
     const storedData = localStorage.getItem("data");
     if (storedData) {
       navigate("/profile"); 
@@ -44,7 +45,16 @@ const Login = () => {
     try {
       const { data } = await authApi.login({ email, password });
       
-      localStorage.setItem("data", JSON.stringify(data));
+      const { token, fullName: resFullName, email: resEmail, avatarUrl, _id } = data;
+
+
+      localStorage.setItem("data", JSON.stringify({
+        token,
+        fullName: resFullName,
+        email: resEmail,
+        avatarUrl,
+        _id
+      }));
       navigate("/profile"); 
       
     } catch (e) {

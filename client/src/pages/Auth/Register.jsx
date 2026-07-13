@@ -46,8 +46,16 @@ const Register = () => {
     try {
       const { data } = await authApi.register({ email, fullName, password });
 
-      console.log("Success");
-      localStorage.setItem("data", JSON.stringify(data));
+      const { token, fullName: resFullName, email: resEmail, avatarUrl, _id } = data;
+
+
+      localStorage.setItem("data", JSON.stringify({
+        token,
+        fullName: resFullName,
+        email: resEmail,
+        avatarUrl,
+        _id
+      }));
       navigate("/profile");
 
     } catch (err) {

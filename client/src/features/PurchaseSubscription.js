@@ -24,7 +24,7 @@ export const usePurchaseSubscription = (onSuccess) => {
     try {
       const result = await subscriptionApi.purchase(type);
       if (result.success) {
-        await subscriptionStore.loadSubscription();
+        await subscriptionStore.loadSubscription(true);
         if (onSuccess) onSuccess();
         setTimeout(() => navigate("/profile"), 2500);
       }
