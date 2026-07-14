@@ -1,11 +1,11 @@
-import { api } from "./base";
+import { api, api_local } from "./base";
 
 
 /**
  * Получение вопросов по технологии
  */
 export const questionsApi = {
-    getByTech: (queryParams) => api.get('/questionsTech', { params: queryParams })
+    getByTech: (queryParams) => api_local.get('/questionsTech', { params: queryParams })
 }
 /**
  * Получение вопросов по фильтрам

@@ -330,16 +330,41 @@ class QuestionController {
 
   async getQuestion(req, res) {
     try {
-      const { tech, difficulty } = req.query;
+      const { tech, difficulty, limit: limitParam, skip: skipParam } = req.query;
+      
+      // 👇 1. Парсим параметры пагинации (по умолчанию 10 штук)
+      const limit = parseInt(limitParam) || 10;
+      const skip = parseInt(skipParam) || 0;
+
       const filter = {};
 
       if (tech) filter.category = new RegExp(`^${tech}$`, 'i');
       if (difficulty) filter.difficulty = difficulty;
 
-      const questions = await Question.find(filter);
-      res.status(200).json(questions);
+      // 👇 2. Хитрый трюк: запрашиваем на 1 вопрос больше, чем нужно
+      // Это самый эффективный способ узнать, есть ли еще вопросы в базе, 
+      // без использования тяжелого countDocuments()
+      const questions = await Question.find(filter)
+        .skip(skip)
+        .limit(limit + 1) 
+        .sort({ rating: -1 }); // 👈 Всегда сортируй при пагинации, чтобы порядок не ломался
+
+      // 👇 3. Определяем, есть ли еще страницы
+      const hasMore = questions.length > limit;
+
+      // Если мы вытащили лишний 11-й вопрос, убираем его из ответа, 
+      // чтобы отдать клиенту ровно столько, сколько он просил
+      const itemsToReturn = hasMore ? questions.slice(0, limit) : questions;
+
+      // 👇 4. Возвращаем объект, а не просто массив
+      res.status(200).json({
+        questions: itemsToReturn,
+        hasMore: hasMore
+      });
+
     } catch (error) {
-      res.status(500).json({ message: "Ошибка получения вопроса", error });
+      console.error("Ошибка получения вопросов:", error);
+      res.status(500).json({ message: "Ошибка получения вопросов", error: error.message });
     }
   }
 }

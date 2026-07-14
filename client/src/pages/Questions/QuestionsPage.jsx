@@ -1,141 +1,125 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { questionsApi } from "../../shared/api/questions";
 import { bookmarksApi } from "../../shared/api/bookmarks";
-import { IoMdBookmark } from "react-icons/io";
-import { BsBookmark } from "react-icons/bs";
-import { FaLock } from "react-icons/fa"; 
 import { SkeletonCard } from "../../shared/ui/Skeleton/SkeletonCard";
 import { useSubscription } from "../../shared/hooks/useSubscription";
+import QuestionCard from "../../entities/QuestionCard";
+
+const LIMIT = 10;
 
 function QuestionsPage() {
   const { tech } = useParams(); 
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true); 
   const { search } = useLocation();
   const params = new URLSearchParams(search);
-
-  const [questions, setQuestions] = useState([]);
-  const [visibleAnswerIndex, setVisibleAnswerIndex] = useState(null);
-  const [bookmarks, setBookmarks] = useState([]); 
-  const [bookmarksLoading, setBookmarksLoading] = useState(true); 
-  
-  const {subscription, loading: subscriptionLoading} = useSubscription()
-  const hasAccess = subscription.isActive
-
   const [difficulty, setDifficulty] = useState(params.get("difficulty") || null);
+  
+  const [pendingQuestionId, setPendingQuestionId] = useState(null);
+  
+  const queryClient = useQueryClient(); 
+  const { subscription } = useSubscription();
+  const hasAccess = subscription?.isActive;
+
   const difficultyLevels = ["Стажёр", "Junior", "Middle", "Senior"];
 
-  useEffect(() => {
-    const fetchBookmarks = async () => {
-      try {
-        setBookmarksLoading(true);
-        const data = await bookmarksApi.getAll();
-        setBookmarks(data.map(q => q._id));
-      } catch (error) {
-        console.error("Ошибка при получении закладок:", error);
-        setBookmarks([]);
-      } finally {
-        setBookmarksLoading(false);
-      }
-    };
-
-    fetchBookmarks();
-  }, []);
-
-  const toggleBookmark = async (question) => {
-    const questionId = question._id;
-    const wasBookmarked = bookmarks.includes(questionId);
-
-    if (wasBookmarked) {
-      setBookmarks(bookmarks.filter(id => id !== questionId));
-    } else {
-      setBookmarks([...bookmarks, questionId]);
-    }
-
-    try {
-      const response = await bookmarksApi.toggle(questionId);
-      
-      if (response.isBookmarked !== !wasBookmarked) {
-        setBookmarks(response.isBookmarked 
-          ? [...bookmarks, questionId]
-          : bookmarks.filter(id => id !== questionId)
-        );
-      }
-    } catch (error) {
-      console.error("Ошибка при обновлении закладки:", error);
-
-      if (wasBookmarked) {
-        setBookmarks([...bookmarks, questionId]);
-      } else {
-        setBookmarks(bookmarks.filter(id => id !== questionId));
-      }
-      
-      alert("Не удалось обновить закладку. Попробуйте ещё раз.");
-    }
-  };
-
-  const fetchQuestions = async () => {
-    setLoading(true);
-    try {
-      const query = new URLSearchParams({ tech });
+  const { 
+    data, 
+    isLoading: isQuestionsLoading, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage 
+  } = useInfiniteQuery({
+    queryKey: ['questions', tech, difficulty],
+    queryFn: async ({ pageParam = 0 }) => {
+      const query = new URLSearchParams({ tech, limit: LIMIT, skip: pageParam });
       if (difficulty) query.set("difficulty", difficulty);
       const { data } = await questionsApi.getByTech(query);
-      setQuestions(data);
-    } catch (error) {
-      console.error("Ошибка при получении вопросов:", error);
-    } finally {
-      setLoading(false);
+      return data; 
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.hasMore !== undefined) {
+        return lastPage.hasMore ? allPages.length * LIMIT : undefined;
+      }
+      if (lastPage.length < LIMIT) return undefined;
+      return allPages.length * LIMIT;
+    },
+    staleTime: 1000 * 60 * 5, 
+  });
+
+  const questions = data?.pages.flatMap(page => 
+    Array.isArray(page) ? page : (page.questions || [])
+  ) || [];
+
+  const { data: bookmarks = [], isLoading: isBookmarksLoading } = useQuery({
+    queryKey: ['bookmarks'],
+    queryFn: async () => {
+      const data = await bookmarksApi.getAll();
+      return data.map(q => q._id); 
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const toggleBookmarkMutation = useMutation({
+    mutationFn: bookmarksApi.toggle,
+    onMutate: async (newQuestionId) => {
+      setPendingQuestionId(newQuestionId);
+      await queryClient.cancelQueries({ queryKey: ['bookmarks'] });
+      const previousBookmarks = queryClient.getQueryData(['bookmarks']) || [];
+      
+      if (previousBookmarks.includes(newQuestionId)) {
+        queryClient.setQueryData(['bookmarks'], previousBookmarks.filter(id => id !== newQuestionId));
+      } else {
+        queryClient.setQueryData(['bookmarks'], [...previousBookmarks, newQuestionId]);
+      }
+      return { previousBookmarks };
+    },
+    onError: (err, newQuestionId, context) => {
+      queryClient.setQueryData(['bookmarks'], context.previousBookmarks);
+      alert("Не удалось обновить закладку. Попробуйте ещё раз.");
+    },
+    onSettled: () => {
+      setPendingQuestionId(null);
+      queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
     }
-  };
+  });
 
-  useEffect(() => {
-    fetchQuestions();
-  }, [tech, difficulty]);
-
+  // 👇 ОБНОВЛЕННАЯ ЛОГИКА: Переключение фильтра (вкл/выкл)
   const handleDifficultyClick = (level) => {
-    setDifficulty(level);
-    navigate(`?difficulty=${encodeURIComponent(level)}`);
+    const newParams = new URLSearchParams(search);
+    
+    if (difficulty === level) {
+      // Если кликнули по уже активному уровню, сбрасываем фильтр
+      setDifficulty(null);
+      newParams.delete('difficulty');
+    } else {
+      // Иначе устанавливаем выбранный уровень
+      setDifficulty(level);
+      newParams.set('difficulty', level);
+    }
+    
+    // Обновляем URL (replace: true, чтобы не засорять историю браузера лишними записями)
+    navigate(`?${newParams.toString()}`, { replace: true });
   };
 
-  const isBookmarked = (questionId) => {
-    return bookmarks.includes(questionId);
-  };
+  const isBookmarked = (questionId) => bookmarks.includes(questionId);
+  const isLoading = isQuestionsLoading || isBookmarksLoading;
 
   return (
     <div className="text-[var(--color-text)]">
       <Link to={"/baza_voprosov"} className="truncate">
         <button className="flex items-center gap-1 text-sm text-st-gray-60 cursor-pointer mb-4">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-            role="img"
-            className="iconify iconify--st-icons"
-            width="1em"
-            height="1em"
-            viewBox="0 0 24 24"
-            style={{ fontSize: "16px" }}
-          >
-            <path
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="m15 6l-6 6l6 6"
-            ></path>
+          <svg xmlns="http://www.w3.org/2000/svg" className="iconify iconify--st-icons" width="1em" height="1em" viewBox="0 0 24 24" style={{ fontSize: "16px" }}>
+            <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m15 6l-6 6l6 6"></path>
           </svg>
           Вернуться к базе вопросов
         </button>
       </Link>
 
       <div>
-        <h1 className="lg:text-5xl text-3xl font-bold mb-4">
-          ТОП вопросов по {tech}
-        </h1>
-        <div className="text-xl">
-          Подборка самых частых вопросов на собеседованиях {tech} разработчикам
-        </div>
+        <h1 className="lg:text-5xl text-3xl font-bold mb-4">ТОП вопросов по {tech}</h1>
+        <div className="text-xl">Подборка самых частых вопросов на собеседованиях {tech} разработчикам</div>
       </div>
 
       <div className="flex flex-col gap-2 mt-4">
@@ -145,7 +129,9 @@ function QuestionsPage() {
             <div 
               key={level}
               onClick={() => handleDifficultyClick(level)} 
-              className="rounded-2xl p-1 px-3 text-md bg-[var(--bg-03)] cursor-pointer hover:bg-[var(--bg-02)] flex gap-1 items-center transition-colors"
+              className={`rounded-2xl p-1 px-3 text-md cursor-pointer flex gap-1 items-center transition-colors ${
+                difficulty === level ? 'bg-[var(--color-main)] text-white' : 'bg-[var(--bg-03)] hover:bg-[var(--bg-02)]'
+              }`}
             >
               <span>{level}</span>
             </div>
@@ -154,20 +140,8 @@ function QuestionsPage() {
       </div>
 
       <section className="relative w-full my-6">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-          role="img"
-          className="absolute top-2 left-2 iconify iconify--ic"
-          width="1em"
-          height="1em"
-          viewBox="0 0 24 24"
-          style={{ fontSize: "32px" }}
-        >
-          <path
-            fill="currentColor"
-            d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5A6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5S14 7.01 14 9.5S11.99 14 9.5 14"
-          ></path>
+        <svg xmlns="http://www.w3.org/2000/svg" className="absolute top-2 left-2 iconify iconify--ic" width="1em" height="1em" viewBox="0 0 24 24" style={{ fontSize: "32px" }}>
+          <path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5A6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5S14 7.01 14 9.5S11.99 14 9.5 14"></path>
         </svg>
         <input
           type="text"
@@ -179,99 +153,52 @@ function QuestionsPage() {
       <div>
         <h2 className="text-2xl font-bold mb-4">Вопросы</h2>
          
-        {loading && (
-          <>
-            {[...Array(4)].map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </>
+        {isLoading && (
+          <div className="space-y-4">
+            {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+          </div>
         )}
 
-        {!loading && questions.length === 0 && (
+        {!isLoading && questions.length === 0 && (
           <p>Вопросов по выбранным фильтрам не найдено</p>
         )}
 
-        {!loading && questions.map((question, index) => {
-          const isPremium = question.isPremium === true; // 👈 Проверяем isPremium
-          
-          return (
-            <section 
-              key={question._id} 
-              className="scroll-my-[75px] shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1),_0_10px_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none dark:border dark:border-surface-500 w-full py-2 px-4 rounded-2xl my-4 relative"
+        {!isLoading && questions.map((question) => (
+          <QuestionCard
+            key={question._id}
+            question={question}
+            isBookmarked={isBookmarked(question._id)}
+            onToggleBookmark={() => toggleBookmarkMutation.mutate(question._id)}
+            isPending={pendingQuestionId === question._id}
+            hasAccess={hasAccess}
+          />
+        ))}
+
+        <div className="flex justify-center mt-8 mb-12">
+          {hasNextPage ? (
+            <button
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="px-8 py-3 bg-[var(--color-main)] text-white rounded-xl font-medium hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              <section className="relative w-full">
-                <section className="flex flex-col gap-3 pt-4 pb-2">
-                  <section className="flex flex-col gap-2 text-sm">
-                    <header className="text-xl font-medium flex gap-2 items-center">
-                      <span className="min-w-[10px] min-h-[10px] inline-block rounded-full bg-gray-300"></span>
-                      <section className="flex items-center gap-2 relative support-selectable">
-                        <section>
-                          <h2 className="font-normal">{question.title}</h2>
-                        </section>
-                      </section>
-                      <section className="relative inline-flex ml-auto">
-                        <button
-                          onClick={() => toggleBookmark(question)}
-                          disabled={bookmarksLoading}
-                          aria-label="Добавить в избранное"
-                          className="relative flex items-center justify-center disabled:opacity-50"
-                        >
-                          {isBookmarked(question._id) ? (
-                            <IoMdBookmark className="text-[20px] cursor-pointer text-[var(--color-main)]" />
-                          ) : (
-                            <BsBookmark className="text-[20px] cursor-pointer text-[var(--color-text)]" />
-                          )}
-                        </button>
-                      </section>
-                    </header>
-
-                    <div className="rounded-2xl p-0.5 px-3 w-fit font-medium text-base bg-[var(--bg-02)]">
-                      {question.difficulty}
-                    </div>
-                    <div>
-                      Рейтинг вопроса:
-                      <span className="font-medium">{question.rating}</span>
-                    </div>
-                  </section>
-
-                  {visibleAnswerIndex === index ? (
-                    <div className="answer-box">
-                      <p>
-                        <strong>Ответ:</strong> {question.answer}
-                      </p>
-                      <button
-                        className="flex gap-1 items-center text-slate-500 dark:text-slate-400 hover:underline hover:decoration-1 hover:decoration-slate-300 hover:underline-offset-4 mt-2"
-                        onClick={() => setVisibleAnswerIndex(null)}
-                      >
-                        Скрыть ответ
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      className={`flex gap-1 items-center text-slate-500 dark:text-slate-400 hover:underline hover:decoration-1 hover:decoration-slate-300 hover:underline-offset-4 `}
-                      onClick={() =>  setVisibleAnswerIndex(index)}
-      
-                    >
-                      Показать ответ
-                    </button>
-                  )}
-                </section>
-
-              </section>
-                {/* 👇 Премиум оверлей */}
-                {isPremium && !hasAccess && (
-                  <div className="p-0 absolute inset-0 bg-[var(--bg-03)]/80 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-10">
-                    <div className="flex flex-col items-center gap-3 text-center px-4">
-                      <FaLock className="text-3xl text-[var(--tag-red-border)]" />
-                      <p className="text-lg font-medium text-[var(--tag-red-border)]">
-                        Вопрос доступен <Link to={'/subscription'} className="underline">по подписке</Link> 
-                      </p>
-                    </div>
-                  </div>
-                )}
-            </section>
-          );
-        })}
+              {isFetchingNextPage ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Загрузка...
+                </>
+              ) : (
+                "Показать еще"
+              )}
+            </button>
+          ) : (
+            questions.length > 0 && (
+              <p className="text-gray-500 text-sm">Вы просмотрели все вопросы по этой теме 🎉</p>
+            )
+          )}
+        </div>
       </div>
     </div>
   );
