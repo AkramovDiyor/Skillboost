@@ -1,64 +1,59 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { workerCode } from '../../shared/data/codingTaskData';
+import { workerCode } from '../../shared/data/codingTaskData'; // Worker остается локальным
 import { TaskTags } from '../../widgets/Coding/CodingTaskTags';
 import { CodingEditorPanel } from '../../widgets/Coding/CodingEditorPanel';
 import { Link, useParams } from 'react-router-dom';
-import { tasksData } from '../../shared/data/codingData';
+import { codingApi } from '../../shared/api/coding'; // 👈 Добавили API
 
 export const CodingPage = () => {
   const { id } = useParams();
 
+  const [taskData, setTaskData] = useState(null); // 👇 Теперь это объект из API, а не поиск в массиве
+  const [isLoading, setIsLoading] = useState(true);
+  
   const [activeTab, setActiveTab] = useState('description');
-  const [currentTaskId, setCurrentTaskId] = useState(Number(id));
   const [code, setCode] = useState('');
   const [results, setResults] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [bottomTab, setBottomTab] = useState('result');
-  
-  // Для мобильного переключения: условие | редактор
-  const [mobileView, setMobileView] = useState('description'); // 'description' | 'editor'
+  const [mobileView, setMobileView] = useState('description');
 
-  const taskData = tasksData.find(t => t.id === currentTaskId);
   const workerRef = useRef(null);
-
-  // Определяем, мобильное ли устройство
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // 👇 Загружаем конкретную задачу с сервера при изменении id в URL
   useEffect(() => {
-    if (taskData) {
-      setCode(taskData.starterCode);
-    }
-  }, [currentTaskId]);
-
-  useEffect(() => {
-    if (id) {
-      setCurrentTaskId(Number(id));
-    }
+    const fetchTask = async () => {
+      if (!id) return;
+      setIsLoading(true);
+      try {
+        const data = await codingApi.getTaskById(id);
+        setTaskData(data);
+        setCode(data.starterCode); // Устанавливаем стартовый код из БД
+      } catch (error) {
+        console.error("Ошибка загрузки задачи:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTask();
   }, [id]);
 
   const handleRun = () => {
-    if (isRunning) return;
+    if (isRunning || !taskData) return;
 
     setIsRunning(true);
     setResults(null);
     setBottomTab('result');
-    
-    // На мобильном — переключаем на редактор, чтобы видеть результат
-    if (isMobile) {
-      setMobileView('editor');
-    }
+    if (isMobile) setMobileView('editor');
 
-    if (workerRef.current) {
-      workerRef.current.terminate();
-    }
+    if (workerRef.current) workerRef.current.terminate();
 
     const blob = new Blob([workerCode], { type: 'application/javascript' });
     const workerUrl = URL.createObjectURL(blob);
@@ -99,29 +94,24 @@ export const CodingPage = () => {
 
     worker.postMessage({
       userCode: code,
-      testCases: taskData.testCases,
+      testCases: taskData.testCases, // 👈 Берем тесты из загруженной задачи
     });
   };
 
   useEffect(() => {
     return () => {
-      if (workerRef.current) {
-        workerRef.current.terminate();
-      }
+      if (workerRef.current) workerRef.current.terminate();
     };
   }, []);
 
-  if (!taskData) {
-    return (
-      <div className="flex items-center justify-center h-screen text-gray-400">
-        Задача не найдена
-      </div>
-    );
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen text-gray-400">Загрузка задачи...</div>;
   }
 
-  // ============================================
-  // Описание задачи (общая часть для desktop и mobile)
-  // ============================================
+  if (!taskData) {
+    return <div className="flex items-center justify-center h-screen text-gray-400">Задача не найдена</div>;
+  }
+
   const TaskDescription = () => (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -135,27 +125,21 @@ export const CodingPage = () => {
 
       <TaskTags
         difficulty={taskData.difficulty}
-        status={taskData.status}
+        status="Не решено" // Пока заглушка, позже можно подтянуть реальный статус из API
         companies={taskData.companies}
-        extraCompanies={taskData.extraCompanies}
-        solvedPercent={taskData.solvedPercent}
+        extraCompanies={taskData.extraCompanies || 0}
+        solvedPercent={taskData.solvedPercent || 0}
         languages={taskData.languages}
       />
 
       <div className="space-y-3">
-        {taskData.description.map((paragraph, idx) => (
-          <p key={idx}>{paragraph}</p>
-        ))}
-
+        {taskData.description?.map((paragraph, idx) => <p key={idx}>{paragraph}</p>)}
         {taskData.requirements && (
           <div className="mt-4 space-y-2">
-            {taskData.requirements.map((item, idx) => (
-              <p key={idx}>{item}</p>
-            ))}
+            {taskData.requirements.map((item, idx) => <p key={idx}>{item}</p>)}
           </div>
         )}
-
-        {taskData.examples.map((example, idx) => (
+        {taskData.examples?.map((example, idx) => (
           <div key={idx} className="mt-4 space-y-3">
             <h3 className="font-semibold">Пример {idx + 1}:</h3>
             <div>
@@ -172,9 +156,7 @@ export const CodingPage = () => {
             </div>
             {example.explanation && (
               <div className="text-gray-500 text-xs space-y-1">
-                {example.explanation.map((line, i) => (
-                  <div key={i}>{line}</div>
-                ))}
+                {example.explanation.map((line, i) => <div key={i}>{line}</div>)}
               </div>
             )}
           </div>
@@ -185,35 +167,17 @@ export const CodingPage = () => {
 
   return (
     <div className="text-[var(--color-text)] flex flex-col h-screen">
-      {/* Кнопка "Назад" */}
       <div className="sm:px-2 sm:pt-2 pb-1">
         <Link to="/coding" className="truncate">
           <button className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-300 cursor-pointer">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
-              role="img"
-              className="iconify iconify--st-icons"
-              width="1em"
-              height="1em"
-              viewBox="0 0 24 24"
-              style={{ fontSize: "16px" }}
-            >
-              <path
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="m15 6l-6 6l6 6"
-              ></path>
+            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" style={{ fontSize: "16px" }}>
+              <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m15 6l-6 6l6 6" />
             </svg>
             Вернуться к списку задач
           </button>
         </Link>
       </div>
 
-      {/* Header */}
       <header className="px-2 sm:px-4 py-2 border-b border-gray-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -226,13 +190,12 @@ export const CodingPage = () => {
               onClick={handleRun}
               disabled={isRunning}
               className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                isRunning
-                  ? 'bg-gray-600 cursor-not-allowed'
-                  : 'bg-gray-700 hover:bg-gray-600'
+                isRunning ? 'bg-gray-600 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'
               }`}
             >
               {isRunning ? '⏳' : '▶'} <span className="hidden sm:inline">Запустить</span>
             </button>
+            {/* Кнопка "Отправить" пока без логики сохранения, добавим её на следующем шаге */}
             <button className="px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded-md text-sm font-medium transition-colors whitespace-nowrap">
               <span className="hidden sm:inline">Отправить</span>
               <span className="sm:hidden">✓</span>
@@ -241,12 +204,8 @@ export const CodingPage = () => {
         </div>
       </header>
 
-      {/* ============================================ */}
-      {/* DESKTOP: две панели рядом */}
-      {/* ============================================ */}
       {!isMobile && (
         <div className="flex-1 flex overflow-hidden">
-          {/* Left Sidebar */}
           <div className="w-1/3 min-w-[360px] lg:min-w-[400px] border-r border-gray-700 flex flex-col overflow-hidden">
             <div className="flex border-b border-gray-700 flex-shrink-0">
               {[
@@ -270,16 +229,11 @@ export const CodingPage = () => {
 
             <div className="flex-1 overflow-y-auto p-4">
               {activeTab === 'description' && <TaskDescription />}
-              {activeTab === 'my-solutions' && (
-                <div className="text-center text-gray-400 py-8">У вас пока нет решений</div>
-              )}
-              {activeTab === 'solutions' && (
-                <div className="text-center text-gray-400 py-8">Решения других пользователей</div>
-              )}
+              {activeTab === 'my-solutions' && <div className="text-center text-gray-400 py-8">У вас пока нет решений</div>}
+              {activeTab === 'solutions' && <div className="text-center text-gray-400 py-8">Решения других пользователей</div>}
             </div>
           </div>
 
-          {/* Right Side - Editor */}
           <CodingEditorPanel
             Language={taskData.languages}
             code={code}
@@ -293,19 +247,13 @@ export const CodingPage = () => {
         </div>
       )}
 
-      {/* ============================================ */}
-      {/* MOBILE: переключение через табы */}
-      {/* ============================================ */}
       {isMobile && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Mobile Tabs */}
           <div className="flex border-b border-gray-700 flex-shrink-0">
             <button
               onClick={() => setMobileView('description')}
               className={`flex-1 px-4 py-2 text-sm font-medium border-b-2 transition-colors text-center ${
-                mobileView === 'description'
-                  ? 'border-[var(--color-main)] text-[var(--color-main)]'
-                  : 'border-transparent text-gray-400 hover:text-gray-300'
+                mobileView === 'description' ? 'border-[var(--color-main)] text-[var(--color-main)]' : 'border-transparent text-gray-400 hover:text-gray-300'
               }`}
             >
               Описание
@@ -313,21 +261,16 @@ export const CodingPage = () => {
             <button
               onClick={() => setMobileView('editor')}
               className={`flex-1 px-4 py-2 text-sm font-medium border-b-2 transition-colors text-center ${
-                mobileView === 'editor'
-                  ? 'border-[var(--color-main)] text-[var(--color-main)]'
-                  : 'border-transparent text-gray-400 hover:text-gray-300'
+                mobileView === 'editor' ? 'border-[var(--color-main)] text-[var(--color-main)]' : 'border-transparent text-gray-400 hover:text-gray-300'
               }`}
             >
-             Редактор
+              Редактор
             </button>
           </div>
 
-          {/* Mobile Content */}
           <div className="flex-1 overflow-hidden">
             {mobileView === 'description' ? (
-              <div className="h-full overflow-y-auto p-4">
-                <TaskDescription />
-              </div>
+              <div className="h-full overflow-y-auto p-4"><TaskDescription /></div>
             ) : (
               <div className="h-full flex flex-col">
                 <CodingEditorPanel
