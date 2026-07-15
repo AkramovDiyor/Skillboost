@@ -62,33 +62,50 @@
         }
         
         // Прогоняем тесты
-        const results = testCases.map((test, index) => {
-          try {
-            const result = userFunction(...test.input);
-            const passed = JSON.stringify(result) === JSON.stringify(test.expected);
-            
-            return {
-              passed,
-              input: test.input,
-              expected: test.expected,
-              got: result
-            };
-          } catch (testError) {
-            return {
-              passed: false,
-              input: test.input,
-              expected: test.expected,
-              got: 'Ошибка: ' + testError.message,
-              error: testError.message
-            };
-          }
-        });
+            // ... (код до прогона тестов остается таким же)
+    
+    // Прогоняем тесты с замером времени
+    const results = testCases.map((test, index) => {
+      try {
+        // 👇 ЗАМЕРЯЕМ ВРЕМЯ
+        const startTime = performance.now();
+        const result = userFunction(...test.input);
+        const endTime = performance.now();
+        const timeTaken = endTime - startTime;
+
+        const passed = JSON.stringify(result) === JSON.stringify(test.expected);
         
-        self.postMessage({ 
-          success: true, 
-          results,
-          logs 
-        });
+        return {
+          passed,
+          input: test.input,
+          expected: test.expected,
+          got: result,
+          timeMs: timeTaken // 👈 Передаем время на фронтенд
+        };
+      } catch (testError) {
+        return {
+          passed: false,
+          input: test.input,
+          expected: test.expected,
+          got: 'Ошибка: ' + testError.message,
+          error: testError.message,
+          timeMs: 0
+        };
+      }
+    });
+    
+    // 👇 Считаем среднее время выполнения (без учета упавших с ошибкой)
+    const successfulTests = results.filter(r => r.passed);
+    const avgTime = successfulTests.length > 0 
+      ? successfulTests.reduce((acc, curr) => acc + curr.timeMs, 0) / successfulTests.length 
+      : 0;
+
+    self.postMessage({ 
+      success: true, 
+      results,
+      avgExecutionTime: avgTime, // 👈 Среднее время
+      logs 
+    });
         
       } catch (error) {
         self.postMessage({ 

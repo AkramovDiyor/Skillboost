@@ -31,6 +31,7 @@ class CodingController {
 
 
   // 3. Получить мои решения для задачи
+
   async getUserSubmissions(req, res) {
     try {
       const userId = req.userId; 
@@ -38,8 +39,8 @@ class CodingController {
 
       const submissions = await Submission.find({ userId, taskId })
         .sort({ createdAt: -1 })
-        // 👇 ДОБАВЛЕН testResults СЮДА:
-        .select("code language status createdAt testResults");
+        // 👇 ДОБАВЬ СЮДА performance И codeQuality
+        .select("code language status createdAt testResults performance codeQuality");
 
       res.status(200).json(submissions);
     } catch (error) {
@@ -47,11 +48,44 @@ class CodingController {
     }
   }
 
+  // Метод отправки решения
+  async submitCode(req, res) {
+    try {
+      const userId = req.userId; 
+      const { taskId, code, language, status, testResults, performance, codeQuality } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Пользователь не авторизован" });
+      }
+      if (!taskId || !code) {
+        return res.status(400).json({ message: "Недостаточно данных" });
+      }
+
+      const newSubmission = await Submission.create({
+        userId,
+        taskId: Number(taskId),
+        code,
+        language: language || "JS",
+        status: status || "Попытка",
+        testResults: testResults || { passedCount: 0, totalTests: 0, percent: 0 },
+        performance: performance || { executionTimeMs: 0, rating: "Хорошо" }, 
+        codeQuality: codeQuality || { score: 0, issues: [] } 
+      }); // 👈 Убрал лишнюю точку с запятой
+
+      res.status(201).json({
+        message: "Решение сохранено",
+        submission: newSubmission,
+      });
+    } catch (error) {
+      console.error("Ошибка сохранения решения:", error);
+      res.status(500).json({ message: "Ошибка сервера при сохранении", details: error.message });
+    }
+  }
 // server/Controller/coding-controller.js (метод submitCode)
 async submitCode(req, res) {
   try {
     const userId = req.userId; 
-    const { taskId, code, language, status, testResults } = req.body;
+    const { taskId, code, language, status, testResults, performance, codeQuality } = req.body;
 
     if (!userId) {
       return res.status(401).json({ message: "Пользователь не авторизован" });
@@ -60,6 +94,7 @@ async submitCode(req, res) {
       return res.status(400).json({ message: "Недостаточно данных" });
     }
 
+
     const newSubmission = await Submission.create({
       userId,
       taskId: Number(taskId),
@@ -67,7 +102,9 @@ async submitCode(req, res) {
       language: language || "JS",
       status: status || "Попытка",
       testResults: testResults || { passedCount: 0, totalTests: 0, percent: 0 },
-    });
+      performance: performance || { executionTimeMs: 0, rating: "Хорошо" }, // 👈
+      codeQuality: codeQuality || { score: 0, issues: [] } // 👈
+    });;
 
     res.status(201).json({
       message: "Решение сохранено",

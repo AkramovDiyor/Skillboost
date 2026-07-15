@@ -12,13 +12,16 @@ export const codingApi = {
   },
 
   // 👇 ДОБАВЛЕН АРГУМЕНТ testResults
-  submitSolution: async (taskId, code, language, status, testResults) => {
+  // 👇 ДОБАВЛЕНЫ АРГУМЕНТЫ performance и quality
+  submitSolution: async (taskId, code, language, status, testResults, performance, quality) => {
     const { data } = await api_local.post("/coding/submit", { 
       taskId, 
       code, 
       language, 
       status,
-      testResults // <-- Это уйдет на сервер
+      testResults,
+      performance, // 👈 Передаем на сервер
+      codeQuality: quality // 👈 Передаем на сервер (на бекенде ожидается codeQuality)
     });
     return data;
   },
