@@ -1,27 +1,31 @@
-import React, { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { testTasks } from '../shared/data/testTaskData'
+import React from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { testTaskApi } from '../shared/api/testTaskApi'; // Убедись, что путь верный
 
 const TestTaskCard = () => {
-    const [data, setData] = useState()
+    const { id } = useParams();
 
-    const { id } = useParams()
+    // --- ПОЛУЧЕНИЕ ДАННЫХ С СЕРВЕРА ---
+    const { data: task, isLoading, isError } = useQuery({
+        queryKey: ['test-task', id],
+        queryFn: () => testTaskApi.getById(id),
+        enabled: !!id, // Запрос пойдет только когда id существует
+    });
 
-    console.log(id);
+    // --- СОСТОЯНИЯ ЗАГРУЗКИ И ОШИБОК ---
+    if (isLoading) {
+        return <div className="flex items-center justify-center h-screen text-gray-400">Загрузка задания...</div>;
+    }
 
-    useEffect(() => {
-        for (let i = 0; i < testTasks.length; i++) {
-            if (id == testTasks[i].id) {
-                setData(testTasks[i])
-            }
-        }
-        console.log(data);
-    })
+    if (isError || !task) {
+        return <div className="flex items-center justify-center h-screen text-gray-400">Задание не найдено</div>;
+    }
 
     return (
         <div className='text-[var(--color-text)]'>
             <Link to={"/test-tasks"} className="truncate">
-                <button className="flex items-center gap-1 text-sm text-st-gray-60   cursor-pointer mb-4">
+                <button className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-300 cursor-pointer mb-4">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         aria-hidden="true"
@@ -44,27 +48,27 @@ const TestTaskCard = () => {
                     Тестовые задания
                 </button>
             </Link>
+            
             <section className="flex flex-col gap-2">
-                {data && data.description && (
+                {task.description && (
                     <>
-                        <h3 className="font-bold text-xl">Задача</h3>
-                        <p>{data.company}</p>
+                        <h3 className="font-bold text-xl mb-2">Задача</h3>
+                        <p className="text-gray-400 mb-4">{task.company}</p>
                         <section className="overflow-auto">
-
-                            <div className="text-xl">
-                                {data.description.split('\n').map((line, idx) => (
-                                    <p key={idx} className="mb-10">
+                            <div className="text-base lg:text-xl leading-relaxed">
+                                {task.description.split('\n').map((line, idx) => (
+                                    // Уменьшил mb-10 до mb-4, чтобы текст не был слишком растянут
+                                    <p key={idx} className="mb-4">
                                         {line || <br />}
                                     </p>
                                 ))}
                             </div>
-
                         </section>
                     </>
                 )}
             </section>
         </div>
-    )
+    );
 }
 
-export default TestTaskCard
+export default TestTaskCard;

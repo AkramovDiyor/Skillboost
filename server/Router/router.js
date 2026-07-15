@@ -9,7 +9,11 @@ const checkAuth = require('../Controller/middlewares/checkAuth.js');
 // const { checkSubscription } = require('../Controller/middlewares/checkAuth.js'); //   Исправлен путь
 const UserController = require("../Controller/user-controller.js");
 const CodingController = require("../Controller/coding-controller.js");
+const TestTaskController = require("../Controller/test-task-controller.js");
 
+
+router.get("/test-tasks", TestTaskController.getAllTestTasks);
+router.get("/test-tasks/:id", TestTaskController.getTestTaskById);
 // Публичные роуты (или с checkAuth, если задачи только для зарегистрированных)
 router.get("/coding/tasks", CodingController.getAllTasks);
 router.get("/coding/tasks/:id", CodingController.getTaskById);
