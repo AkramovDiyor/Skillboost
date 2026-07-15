@@ -5,10 +5,10 @@ export const analyzeCodeQuality = (userCode) => {
     const cleanCode = userCode.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '').trim();
     const lineCount = cleanCode.split('\n').length;
   
-    if (/\bvar\b/.test(userCode)) {
-      score -= 15;
-      issues.push("Используется 'var'. Используйте 'let' или 'const'.");
-    }
+    // if (/\bvar\b/.test(userCode)) {
+    //   score -= 15;
+    //   issues.push("Используется 'var'. Используйте 'let' или 'const'.");
+    // }
     if (/console\.log/.test(userCode)) {
       score -= 10;
       issues.push("В коде остался 'console.log'. Уберите отладку.");

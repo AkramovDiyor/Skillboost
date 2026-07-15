@@ -14,6 +14,21 @@ const CodingController = require("../Controller/coding-controller.js");
 router.get("/coding/tasks", CodingController.getAllTasks);
 router.get("/coding/tasks/:id", CodingController.getTaskById);
 
+
+
+// Маршруты задач
+
+router.delete("/tasks/:id", CodingController.deleteTask); 
+
+
+
+// НОВЫЙ МАРШРУТ для удаления решения по _id (MongoDB ID)
+router.delete("/submissions/:id",checkAuth,  CodingController.deleteSubmission); 
+
+module.exports = router;
+
+
+
 // Роуты, требующие авторизации
 router.post("/coding/submit", checkAuth, CodingController.submitCode);
 router.get("/coding/submissions/:taskId", checkAuth, CodingController.getUserSubmissions);

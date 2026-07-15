@@ -5,9 +5,8 @@ import { Link, useParams } from 'react-router-dom';
 import { codingApi } from '../../shared/api/coding';
 import { useCodeWorker } from '../../features/coding/model/useCodeWorker';
 import { analyzeCodeQuality } from '../../features/coding/lib/analyzeCodeQuality';
-import { CodingHeader } from '../../widgets/Coding/ui/CodingHeader';
-import { CodingTaskPanel } from '../../widgets/Coding/ui/CodingTaskPanel';
-
+import { CodingHeader } from '../../widgets/coding/ui/CodingHeader';
+import { CodingTaskPanel } from '../../widgets/coding/ui/CodingTaskPanel';
 
 export const CodingPage = () => {
   const { id } = useParams();
@@ -20,7 +19,8 @@ export const CodingPage = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bottomTab, setBottomTab] = useState('result');
-  const [mobileView, setMobileView] = useState('description');
+  
+  const [mobileView, setMobileView] = useState('editor'); 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // --- ХУКИ ЗАПРОСОВ ---
@@ -115,19 +115,18 @@ export const CodingPage = () => {
     }
   };
 
-  // --- РЕНДЕР ---
   if (isTaskLoading) return <div className="flex items-center justify-center h-screen text-gray-400">Загрузка задачи...</div>;
   if (!taskData) return <div className="flex items-center justify-center h-screen text-gray-400">Задача не найдена</div>;
 
   return (
-    <div className="text-[var(--color-text)] flex flex-col h-screen">
-      <div className="sm:px-2 sm:pt-2 pb-1">
+    <div className="text-[var(--color-text)] flex flex-col h-screen bg-[var(--bg-01)]">
+      <div className="sm:px-2 sm:pt-2 pb-1 px-2 pt-2">
         <Link to="/coding" className="truncate">
           <button className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-300 cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" style={{ fontSize: "16px" }}>
               <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m15 6l-6 6l6 6" />
             </svg>
-            Вернуться к списку задач
+            Вернуться
           </button>
         </Link>
       </div>
@@ -153,36 +152,43 @@ export const CodingPage = () => {
             bottomTab={bottomTab}
             onBottomTabChange={setBottomTab}
             testCases={taskData.testCases}
+            isMobile={isMobile}
           />
         </div>
       )}
 
       {isMobile && (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex border-b border-gray-700 flex-shrink-0">
-            <button onClick={() => setMobileView('description')} className={`flex-1 px-4 py-2 text-sm font-medium border-b-2 transition-colors text-center ${mobileView === 'description' ? 'border-[var(--color-main)] text-[var(--color-main)]' : 'border-transparent text-gray-400 hover:text-gray-300'}`}>Описание</button>
-            <button onClick={() => setMobileView('editor')} className={`flex-1 px-4 py-2 text-sm font-medium border-b-2 transition-colors text-center ${mobileView === 'editor' ? 'border-[var(--color-main)] text-[var(--color-main)]' : 'border-transparent text-gray-400 hover:text-gray-300'}`}>Редактор</button>
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+          <div className="flex border-b border-gray-700 flex-shrink-0 bg-[var(--bg-02)]">
+            <button 
+              onClick={() => setMobileView('description')} 
+              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors text-center ${mobileView === 'description' ? 'border-[var(--color-main)] text-[var(--color-main)]' : 'border-transparent text-gray-400'}`}
+            >
+              Задача
+            </button>
+            <button 
+              onClick={() => setMobileView('editor')} 
+              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors text-center ${mobileView === 'editor' ? 'border-[var(--color-main)] text-[var(--color-main)]' : 'border-transparent text-gray-400'}`}
+            >
+              Код
+            </button>
           </div>
 
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
             {mobileView === 'description' ? (
-              <div className="h-full overflow-y-auto p-4">
-                {/* На мобилке просто рендерим панель целиком, она сама разобьется на вкладки */}
-                <CodingTaskPanel taskData={taskData} mySolutions={mySolutions} />
-              </div>
+              <CodingTaskPanel taskData={taskData} mySolutions={mySolutions} isMobile={isMobile} />
             ) : (
-              <div className="h-full flex flex-col">
-                <CodingEditorPanel
-                  Language={taskData.languages}
-                  code={code}
-                  onCodeChange={setCode}
-                  results={results}
-                  isRunning={isRunning}
-                  bottomTab={bottomTab}
-                  onBottomTabChange={setBottomTab}
-                  testCases={taskData.testCases}
-                />
-              </div>
+              <CodingEditorPanel
+                Language={taskData.languages}
+                code={code}
+                onCodeChange={setCode}
+                results={results}
+                isRunning={isRunning}
+                bottomTab={bottomTab}
+                onBottomTabChange={setBottomTab}
+                testCases={taskData.testCases}
+                isMobile={isMobile}
+              />
             )}
           </div>
         </div>

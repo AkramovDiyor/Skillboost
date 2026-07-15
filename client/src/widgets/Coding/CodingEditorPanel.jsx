@@ -23,7 +23,8 @@ export const CodingEditorPanel = ({
   bottomTab,
   onBottomTabChange,
   testCases,
-  Language 
+  Language,
+  isMobile = false
 }) => {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('theme') || 'light';
@@ -44,8 +45,8 @@ export const CodingEditorPanel = ({
   const displayLanguage = Language?.join(', ') || primaryLanguage;
 
   return (
-    // 🔧 Ключевое: min-h-0 позволяет flex-детям сжиматься
-    <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+    
+    <div className="w-full h-full flex flex-col overflow-hidden bg-[var(--bg-01)]">
       
       {/* Editor Header */}
       <div className="border-b border-gray-700 px-3 py-2 flex items-center justify-between flex-shrink-0">
@@ -54,9 +55,8 @@ export const CodingEditorPanel = ({
         </div>
       </div>
 
-      {/* Monaco Editor */}
-      {/* 🔧 flex-1 + min-h-0 + h-0 позволяет редактору занимать доступное место */}
-      <div className="flex-1 min-h-[120px] sm:flex-none sm:h-[60%]">
+
+      <div className="flex-1 min-h-0">
         <Editor
           defaultLanguage={monacoLanguage}
           language={monacoLanguage}
@@ -67,7 +67,7 @@ export const CodingEditorPanel = ({
             fontSize: 14,
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
-            automaticLayout: true, // 🔧 Важно: авто-ресайз при изменении контейнера
+            automaticLayout: true, // Обязательно для адаптивности
             padding: { top: 12 },
             fontFamily: "'Fira Code', 'Consolas', 'Monaco', monospace",
             fontLigatures: true,
@@ -76,18 +76,16 @@ export const CodingEditorPanel = ({
             matchBrackets: 'always',
             tabSize: 2,
             wordWrap: 'on',
-            // 🔧 Оптимизация для мобильных
             overviewRulerLanes: 0,
             hideCursorInOverviewRuler: true,
           }}
         />
       </div>
 
-      {/* Bottom Panel - адаптивная высота */}
-      <div className="flex-shrink-0 border-t border-gray-700 flex flex-col 
-                      h-90 sm:h-56 md:h-[350px]">
+
+      <div className={`flex-shrink-0 border-t border-gray-700 flex flex-col ${isMobile ? 'h-48' : 'h-56 md:h-[350px]'}`}>
         
-        {/* Tabs */}
+  
         <div className="flex border-b border-gray-700 flex-shrink-0">
           <button
             onClick={() => onBottomTabChange('result')}
@@ -112,7 +110,8 @@ export const CodingEditorPanel = ({
         </div>
 
         {/* Panel Content */}
-        <div className="flex-1 overflow-y-auto min-h-[42px]">
+        {/* 👇 Добавлен min-h-0 для корректного скролла */}
+        <div className="flex-1 overflow-y-auto min-h-0">
           {bottomTab === 'result' ? (
             <ResultsPanel results={results} isRunning={isRunning} />
           ) : (
