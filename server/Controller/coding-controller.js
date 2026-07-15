@@ -29,15 +29,17 @@ class CodingController {
     }
   }
 
+
   // 3. Получить мои решения для задачи
   async getUserSubmissions(req, res) {
     try {
-      const userId = req.userId; // Из middleware авторизации (или убери, если авторизации пока нет)
+      const userId = req.userId; 
       const { taskId } = req.params;
 
       const submissions = await Submission.find({ userId, taskId })
         .sort({ createdAt: -1 })
-        .select("code language status createdAt");
+        // 👇 ДОБАВЛЕН testResults СЮДА:
+        .select("code language status createdAt testResults");
 
       res.status(200).json(submissions);
     } catch (error) {
@@ -45,33 +47,37 @@ class CodingController {
     }
   }
 
-  // 4. 👇 ВОТ ЭТОТ МЕТОД ДОЛЖЕН БЫТЬ ЗДЕСЬ!
-  async submitCode(req, res) {
-    try {
-      const userId = req.userId || "guest"; // Временная заглушка, если нет авторизации
-      const { taskId, code, language, status } = req.body;
+// server/Controller/coding-controller.js (метод submitCode)
+async submitCode(req, res) {
+  try {
+    const userId = req.userId; 
+    const { taskId, code, language, status, testResults } = req.body;
 
-      if (!taskId || !code) {
-        return res.status(400).json({ message: "Недостаточно данных (taskId и code обязательны)" });
-      }
-
-      const newSubmission = await Submission.create({
-        userId,
-        taskId: Number(taskId),
-        code,
-        language: language || "JS",
-        status: status || "Попытка",
-      });
-
-      res.status(201).json({
-        message: "Решение сохранено",
-        submission: newSubmission,
-      });
-    } catch (error) {
-      console.error("Ошибка сохранения решения:", error);
-      res.status(500).json({ message: "Ошибка сервера при сохранении" });
+    if (!userId) {
+      return res.status(401).json({ message: "Пользователь не авторизован" });
     }
+    if (!taskId || !code) {
+      return res.status(400).json({ message: "Недостаточно данных" });
+    }
+
+    const newSubmission = await Submission.create({
+      userId,
+      taskId: Number(taskId),
+      code,
+      language: language || "JS",
+      status: status || "Попытка",
+      testResults: testResults || { passedCount: 0, totalTests: 0, percent: 0 },
+    });
+
+    res.status(201).json({
+      message: "Решение сохранено",
+      submission: newSubmission,
+    });
+  } catch (error) {
+    console.error("Ошибка сохранения решения:", error);
+    res.status(500).json({ message: "Ошибка сервера при сохранении", details: error.message });
   }
+}
 }
 
 // 👇 ЭТА СТРОКА ОБЯЗАТЕЛЬНА!

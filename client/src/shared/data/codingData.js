@@ -41,11 +41,3 @@ export const baseCompanies = [
   { name: 'Sportradar' },
 ];
 
-
-
-export const allCompanies = baseCompanies.map(company => ({
-  ...company,
-  count: typeof tasksData !== 'undefined' 
-    ? tasksData.filter(task => task.companies.includes(company.name)).length 
-    : 0
-}));

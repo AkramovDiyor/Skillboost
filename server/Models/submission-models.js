@@ -1,3 +1,4 @@
+// server/Models/submission-models.js
 const mongoose = require("mongoose");
 
 const submissionSchema = new mongoose.Schema(
@@ -7,8 +8,8 @@ const submissionSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    id: {
-      type: Number, // ID задачи из твоего tasksData
+    taskId: {
+      type: Number,
       required: true,
     },
     code: {
@@ -24,11 +25,16 @@ const submissionSchema = new mongoose.Schema(
       enum: ["Попытка", "Решено"],
       default: "Попытка",
     },
+    // 👇 Новое поле для красивой статистики в истории
+    testResults: {
+      passedCount: { type: Number, default: 0 },
+      totalTests: { type: Number, default: 0 },
+      percent: { type: Number, default: 0 },
+    }
   },
   { timestamps: true }
 );
 
-// Индекс, чтобы быстро искать последние решения пользователя для конкретной задачи
 submissionSchema.index({ userId: 1, taskId: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Submission", submissionSchema);

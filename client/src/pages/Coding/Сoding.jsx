@@ -1,10 +1,11 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query'; 
 import { useSubscription } from '../../shared/hooks/useSubscription';
 import { codingApi } from '../../shared/api/coding'; 
 import LanguageSelect from '../../widgets/Coding/CodingLanguageSelect';
 import CodingTaskCard from '../../entities/CodingTaskCard';
-import { baseCompanies } from '../../shared/data/codingData'; // 👈 Используем только базовый список имен
+import { baseCompanies } from '../../shared/data/codingData';
 
 export default function Coding() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -13,54 +14,36 @@ export default function Coding() {
   const [activeCompany, setActiveCompany] = useState(null);
   const [maxHeight, setMaxHeight] = useState('60px');
   const contentRef = useRef(null);
-
-  // Состояния для данных с сервера
-  const [tasks, setTasks] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   
   const { subscription } = useSubscription();
   const hasAccess = subscription?.isActive;
 
-  // 1. Загружаем список задач при монтировании
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        setIsLoading(true);
-        const data = await codingApi.getTasksList();
-        setTasks(data);
-      } catch (error) {
-        console.error("Ошибка загрузки списка задач:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchTasks();
-  }, []);
 
-  // Анимация раскрытия списка компаний
-  useEffect(() => {
+  const { data: tasks = [], isLoading: isTasksLoading } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: codingApi.getTasksList,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  
+  React.useEffect(() => {
     if (contentRef.current) {
       const scrollHeight = contentRef.current.scrollHeight;
       setMaxHeight(showAllCompanies ? `${scrollHeight}px` : '60px');
     }
   }, [showAllCompanies]);
 
-  // 2. 👇 Динамический подсчет на основе baseCompanies и загруженных задач
+ 
   const companiesWithCounts = useMemo(() => {
     return baseCompanies
-      .map(company => {
-        // Считаем, сколько задач содержит эту компанию из загруженных с сервера
-        const count = tasks.filter(t => t.companies.includes(company.name)).length;
-        return {
-          name: company.name,
-          count: count
-        };
-      })
-
-      .sort((a, b) => b.count - a.count); // Сортируем по популярности (от большего к меньшему)
+      .map(company => ({
+        name: company.name,
+        count: tasks.filter(t => t.companies.includes(company.name)).length
+      }))
+      .sort((a, b) => b.count - a.count);
   }, [tasks]);
 
-  // 3. Фильтрация задач
+  
   const filteredTasks = useMemo(() => {
     let result = tasks;
 
@@ -81,14 +64,10 @@ export default function Coding() {
   }, [tasks, searchQuery, selectedLanguage, activeCompany]);
 
   const handleCompanyClick = (companyName) => {
-    if (activeCompany === companyName) {
-      setActiveCompany(null); // Сброс фильтра при повторном клике
-    } else {
-      setActiveCompany(companyName);
-    }
+    setActiveCompany(activeCompany === companyName ? null : companyName);
   };
 
-  if (isLoading) {
+  if (isTasksLoading) {
     return <div className="flex items-center justify-center h-screen text-gray-400">Загрузка задач...</div>;
   }
 
@@ -131,20 +110,9 @@ export default function Coding() {
             <span className="transition-all duration-300">
               {showAllCompanies ? 'Свернуть' : 'Развернуть все компании'}
             </span>
-            <svg
-              width="14"
-              height="15.08"
-              viewBox="0 0 13 14"
-              className="transition-transform duration-500 ease-in-out"
-              style={{
-                transform: showAllCompanies ? 'rotate(180deg)' : 'rotate(0deg)',
-              }}
-            >
+            <svg width="14" height="15.08" viewBox="0 0 13 14" className="transition-transform duration-500 ease-in-out" style={{ transform: showAllCompanies ? 'rotate(180deg)' : 'rotate(0deg)' }}>
               <g fill="none">
-                <path
-                  d="M6.5 14.0016L0.5 8.00156L1.9 6.60156L6.5 11.1766L11.1 6.60156L12.5 8.00156L6.5 14.0016ZM6.5 8.00156L0.5 2.00156L1.9 0.601562L6.5 5.17656L11.1 0.601562L12.5 2.00156L6.5 8.00156Z"
-                  fill="currentColor"
-                />
+                <path d="M6.5 14.0016L0.5 8.00156L1.9 6.60156L6.5 11.1766L11.1 6.60156L12.5 8.00156L6.5 14.0016ZM6.5 8.00156L0.5 2.00156L1.9 0.601562L6.5 5.17656L11.1 0.601562L12.5 2.00156L6.5 8.00156Z" fill="currentColor" />
               </g>
             </svg>
           </button>
@@ -159,10 +127,7 @@ export default function Coding() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="flex-1 border border-gray-700 rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:border-transparent transition-all"
         />
-        <LanguageSelect
-          value={selectedLanguage}
-          onChange={(e) => setSelectedLanguage(e.target.value)}
-        />
+        <LanguageSelect value={selectedLanguage} onChange={(e) => setSelectedLanguage(e.target.value)} />
       </div>
 
       {filteredTasks.length > 0 ? (
@@ -182,8 +147,8 @@ export default function Coding() {
           })}
         </div>
       ) : (
-        <div className="text-center text-gray-500 mt-20 py-10 rounded-xl">
-          <p className="text-lg">Ничего не найдено </p>
+        <div className="text-center text-gray-500 mt-20 py-10 ">
+          <p className="text-lg">Ничего не найдено</p>
           <p className="text-sm mt-2">Попробуйте изменить параметры поиска или фильтры</p>
         </div>
       )}
